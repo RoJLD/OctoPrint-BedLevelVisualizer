@@ -57,6 +57,13 @@ class bedlevelvisualizer(
 		self.regex_probe_result = re.compile(
 			r"Bed X:\s*([-\d.]+)\s+Y:\s*([-\d.]+)\s+Z:\s*([-\d.]+)"
 		)
+		self.regex_bed_temp = re.compile(
+			r"B:\s*([-\d.]+)\s*/\s*[-\d.]+"
+		)
+		self.regex_klipper_screw = re.compile(
+			r"//\s*(\S+)\s*(?:\([^)]*\))?\s*:\s*x=([\d.]+),\s*y=([\d.]+),\s*z=([\d.]+)\s*:\s*Adjust\s+(CW|CCW)\s+([\d:]+)"
+		)
+		self.current_bed_temp = None
 		self.regex_old_marlin = re.compile(r"^(Bed x:.+)|(Llit x:.+)$")
 		self.regex_makergear = re.compile(
 			r"^(\s=\s\[)(\s*,?\s*\[(\s?-?\d+.\d+,?)+\])+\];?$"
@@ -116,6 +123,9 @@ class bedlevelvisualizer(
 			screw_reference_index=0,
 			tolerance_colorscale=False,
 			mesh_history=[],
+			print_start_alert=False,
+			print_start_alert_threshold=0.2,
+			mesh_freshness_hours=24,
 		)
 
 	def get_settings_version(self):
@@ -207,6 +217,40 @@ class bedlevelvisualizer(
 		# Print Started Event
 		if event == Events.PRINT_STARTED:
 			self.printing = True
+			if self._settings.get_boolean(["print_start_alert"]):
+				mesh_history = self._settings.get(["mesh_history"]) or []
+				if not mesh_history:
+					self._plugin_manager.send_plugin_message(
+						self._identifier,
+						{"print_alert": {"type": "no_mesh", "message": "No mesh recorded. Run a mesh update before printing."}}
+					)
+				else:
+					import datetime
+					latest = mesh_history[0]
+					# Freshness check
+					freshness_hours = self._settings.get_float(["mesh_freshness_hours"]) or 24
+					try:
+						ts = latest.get("timestamp", "")
+						mesh_time = datetime.datetime.strptime(ts, "%x, %X")
+						age_hours = (datetime.datetime.now() - mesh_time).total_seconds() / 3600
+						if age_hours > freshness_hours:
+							self._plugin_manager.send_plugin_message(
+								self._identifier,
+								{"print_alert": {"type": "stale_mesh", "message": "Mesh is {:.1f}h old (threshold: {}h). Consider re-leveling.".format(age_hours, freshness_hours)}}
+							)
+					except Exception:
+						pass
+					# P-P threshold check
+					threshold = self._settings.get_float(["print_start_alert_threshold"]) or 0.2
+					try:
+						pp = float(latest.get("pp", 0))
+						if pp > threshold:
+							self._plugin_manager.send_plugin_message(
+								self._identifier,
+								{"print_alert": {"type": "high_pp", "message": "Mesh P-P is {:.3f}mm (threshold: {}mm). Bed may not be leveled.".format(pp, threshold)}}
+							)
+					except Exception:
+						pass
 		# Print Done Event
 		if event == Events.PRINT_DONE:
 			self.printing = False
@@ -257,6 +301,33 @@ class bedlevelvisualizer(
 			except (ValueError, IndexError):
 				pass
 			return line
+
+		# Track bed temperature (always, regardless of processing state)
+		temp_match = self.regex_bed_temp.search(line)
+		if temp_match:
+			try:
+				self.current_bed_temp = float(temp_match.group(1))
+			except (ValueError, IndexError):
+				pass
+
+		# Detect Klipper SCREWS_TILT_CALCULATE output
+		klipper_screw_match = self.regex_klipper_screw.search(line)
+		if klipper_screw_match:
+			try:
+				self._plugin_manager.send_plugin_message(
+					self._identifier,
+					{"klipper_screw_result": {
+						"name": klipper_screw_match.group(1),
+						"x": float(klipper_screw_match.group(2)),
+						"y": float(klipper_screw_match.group(3)),
+						"z": float(klipper_screw_match.group(4)),
+						"direction": klipper_screw_match.group(5),
+						"amount": klipper_screw_match.group(6)
+					}}
+				)
+			except (ValueError, IndexError):
+				pass
+
 		if not self.processing:
 			return line
 
@@ -469,7 +540,7 @@ class bedlevelvisualizer(
 			self.print_mesh_debug("Final mesh:", self.mesh)
 
 			self._plugin_manager.send_plugin_message(
-				self._identifier, dict(mesh=self.mesh, bed=self.bed)
+				self._identifier, dict(mesh=self.mesh, bed=self.bed, bed_temp=self.current_bed_temp)
 			)
 			self.send_mesh_data_collected_event(self.mesh, self.bed)
 
