@@ -662,23 +662,12 @@ class bedlevelvisualizer(
 			bedlevelvisualizer=dict(
 				displayName="Bed Visualizer",
 				displayVersion=self._plugin_version,
-				# version check: github repository
-				type="github_release",
-				user="jneilliii",
+				type="github_commit",
+				user="RoJLD",
 				repo="OctoPrint-BedLevelVisualizer",
+				branch="master",
 				current=self._plugin_version,
-				stable_branch=dict(
-					name="Stable", branch="master", comittish=["master"]
-				),
-				prerelease_branches=[
-					dict(
-						name="Release Candidate",
-						branch="rc",
-						comittish=["rc", "master"],
-					)
-				],
-				# update method: pip
-				pip="https://github.com/jneilliii/OctoPrint-BedLevelVisualizer/archive/{target_version}.zip",
+				pip="https://github.com/RoJLD/OctoPrint-BedLevelVisualizer/archive/{target_version}.zip",
 			)
 		)
 
