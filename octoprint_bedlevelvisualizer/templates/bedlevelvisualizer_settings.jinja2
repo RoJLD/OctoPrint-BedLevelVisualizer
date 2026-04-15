@@ -157,6 +157,33 @@
 					</div>
 				</div>
 			</div>
+				<hr/>
+				<div class="row-fluid" style="padding-top: 5px;">
+					<div class="control-group">
+						<label style="font-weight: bold; margin-bottom: 4px; display: block;">
+							<i class="fa fa-history"></i> Mesh History
+							<small class="muted" style="font-weight: normal; margin-left: 6px;"
+								   data-bind="text: '(' + $root.mesh_history_list().length + '/10)'"></small>
+						</label>
+						<!-- ko if: $root.mesh_history_list().length === 0 -->
+						<p class="muted" style="font-size: 12px;">No history yet. Run a mesh update to start recording.</p>
+						<!-- /ko -->
+						<div data-bind="foreach: $root.mesh_history_list">
+							<div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid #333; font-size: 11px;">
+								<span style="color: #888; flex: 1 1 auto;" data-bind="text: timestamp"></span>
+								<span style="background: #222; border: 1px solid #444; border-radius: 3px; padding: 1px 6px;"
+									  data-bind="text: 'P-P: ' + pp + 'mm',
+												 style: { color: parseFloat(pp) < 0.05 ? '#5c5' : parseFloat(pp) < 0.2 ? '#f90' : '#e44' }"></span>
+								<button class="btn btn-mini"
+										data-bind="click: function(){ $root.restoreHistoryMesh($data); }"
+										title="Restore this mesh">
+									<i class="fa fa-undo"></i> Restore
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 
 			<div id="bedlevelvisualizer_corrections" class="tab-pane">
 				<span data-bind="template: {name: 'bedlevelvisualize_meshtable', data: {mesh: $root.mesh_adjustment(), len: 0}}"></span>

@@ -72,6 +72,7 @@ $(function () {
 		self.graph_z_limits = ko.observable();
 		self.screws_bed_level_guide = ko.observable(false);
 		self.tolerance_colorscale = ko.observable(false);
+		self.mesh_history_list = ko.observableArray([]);
 		self.bed_info = ko.observable({});
 		self.screw_reference_mode = ko.observable('zero');
 		self.screw_reference_index = ko.observable(0);
@@ -100,6 +101,7 @@ $(function () {
 			self.screw_reference_mode(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_mode());
 			self.screw_reference_index(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_index());
 			self.tolerance_colorscale(self.settingsViewModel.settings.plugins.bedlevelvisualizer.tolerance_colorscale());
+			self.mesh_history_list(self.settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_history() || []);
 		};
 
 		self.onAfterBinding = function() {
@@ -244,6 +246,31 @@ $(function () {
 						self.settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_timestamp(new Date().toLocaleString());
 					}
 					self.settingsViewModel.saveData();
+					// Push to mesh history (max 10 entries)
+					var histEntry = {
+						timestamp: new Date().toLocaleString(),
+						mesh_x: mesh_data_x.slice(),
+						mesh_y: mesh_data_y.slice(),
+						mesh: JSON.parse(JSON.stringify(mesh_data_z)),
+						z_height: mesh_data_z_height,
+						pp: (function() {
+							var flat = [];
+							for (var rr = 0; rr < mesh_data_z.length; rr++)
+								for (var cc = 0; cc < mesh_data_z[rr].length; cc++)
+									flat.push(parseFloat(mesh_data_z[rr][cc]));
+							var mn = flat[0], mx = flat[0];
+							for (var ii = 0; ii < flat.length; ii++) {
+								if (flat[ii] < mn) mn = flat[ii];
+								if (flat[ii] > mx) mx = flat[ii];
+							}
+							return (mx - mn).toFixed(3);
+						})()
+					};
+					var hist = self.mesh_history_list().slice();
+					hist.unshift(histEntry);
+					if (hist.length > 10) { hist = hist.slice(0, 10); }
+					self.mesh_history_list(hist);
+					self.settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_history(hist);
 				}
 			}
 
@@ -816,6 +843,14 @@ $(function () {
 			var new_text = text.replace(re, '');
 			self.selected_command().command(new_text);
 			self.selected_command().input.remove(data);
+		};
+
+		self.restoreHistoryMesh = function(entry) {
+			self.mesh_data(entry.mesh);
+			self.mesh_data_x(entry.mesh_x);
+			self.mesh_data_y(entry.mesh_y);
+			self.mesh_data_z_height(entry.z_height);
+			self.drawMesh(entry.mesh, false, entry.mesh_x, entry.mesh_y, entry.z_height);
 		};
 
 		self.runCustomCommand = function(data) {
