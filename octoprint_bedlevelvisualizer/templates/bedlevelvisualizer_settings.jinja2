@@ -255,6 +255,42 @@
 						</small>
 					</div>
 				</div>
+				<div style="padding-top: 5px;" class="row-fluid" data-bind="visible: $root.screws_bed_level_guide">
+					<div class="control-group span12">
+						<label style="margin-bottom: 4px; display: block; font-weight: bold;">Reference for corrections</label>
+						<label class="radio inline" style="margin-right: 12px;">
+							<input type="radio" name="screw_reference_mode" value="zero"
+							       data-bind="checked: $root.screw_reference_mode"/> Z = 0
+						</label>
+						<label class="radio inline" style="margin-right: 12px;">
+							<input type="radio" name="screw_reference_mode" value="screw"
+							       data-bind="checked: $root.screw_reference_mode"/> Reference screw
+						</label>
+						<label class="radio inline">
+							<input type="radio" name="screw_reference_mode" value="plane"
+							       data-bind="checked: $root.screw_reference_mode"/> Best-fit plane
+						</label>
+					</div>
+					<div class="control-group span12" style="margin-top: 4px;"
+					     data-bind="visible: $root.screw_reference_mode() === 'screw'">
+						<label style="display: inline-block; margin-right: 8px;">Anchor screw:</label>
+						<select data-bind="value: $root.screw_reference_index">
+							<!-- ko foreach: $root.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws -->
+							<option data-bind="text: ko.unwrap($data.label) || ('Screw ' + $index()),
+							                   value: $index()"></option>
+							<!-- /ko -->
+						</select>
+						<small class="help-block" style="margin-top: 2px;">
+							This screw stays fixed — all others are adjusted relative to it.
+						</small>
+					</div>
+					<div class="control-group span12" style="margin-top: 2px;"
+					     data-bind="visible: $root.screw_reference_mode() === 'plane'">
+						<small class="help-block">
+							A best-fit plane is computed through all screw Z values. Corrections minimize total levelling work.
+						</small>
+					</div>
+				</div>
 			</div>
 
 			<div id="bedlevelvisualizer_custom_commands" class="tab-pane">
