@@ -113,6 +113,21 @@
                         </div>
                     </div>
 					<div class="control-group">
+    <input class="input-checkbox" type="checkbox"
+           id="bedlevelvisualizer_tolerance_colorscale"
+           title="Use a fixed colorscale calibrated to bed flatness tolerance thresholds: green=OK (&lt;0.05mm), orange=warning (0.05-0.2mm), red=critical (&gt;0.2mm). Overrides the colorscale and Z range settings."
+           data-toggle="tooltip"
+           data-bind="checked: $root.tolerance_colorscale"
+           style="display: inline-block; margin-bottom: 5px;"/>
+    Tolerance Colorscale
+    <small class="help-block" style="margin-top: 2px;">
+        Fixes the color scale to absolute Z thresholds: <span style="color:#00bb44">&#9632; green</span> &lt;0.05mm &mdash;
+        <span style="color:#ee7700">&#9632; orange</span> 0.05&ndash;0.2mm &mdash;
+        <span style="color:#cc3333">&#9632; red</span> &gt;0.2mm.
+        Overrides colorscale and Z range settings.
+    </small>
+</div>
+					<div class="control-group">
                         <input class="input-checkbox" type="checkbox" id="snap_shot"
                                title="Enable saving snapshot on every rendering of the graph in png format."
                                data-toggle="tooltip"

@@ -71,6 +71,7 @@ $(function () {
 		self.turn = ko.observable(0);
 		self.graph_z_limits = ko.observable();
 		self.screws_bed_level_guide = ko.observable(false);
+		self.tolerance_colorscale = ko.observable(false);
 		self.bed_info = ko.observable({});
 		self.screw_reference_mode = ko.observable('zero');
 		self.screw_reference_index = ko.observable(0);
@@ -98,6 +99,7 @@ $(function () {
 			self.screws_bed_level_guide(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screws_bed_level_guide());
 			self.screw_reference_mode(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_mode());
 			self.screw_reference_index(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_index());
+			self.tolerance_colorscale(self.settingsViewModel.settings.plugins.bedlevelvisualizer.tolerance_colorscale());
 		};
 
 		self.onAfterBinding = function() {
@@ -128,6 +130,7 @@ $(function () {
 			self.settingsViewModel.settings.plugins.bedlevelvisualizer.screws_bed_level_guide(self.screws_bed_level_guide());
 			self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_mode(self.screw_reference_mode());
 			self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_index(self.screw_reference_index());
+			self.settingsViewModel.settings.plugins.bedlevelvisualizer.tolerance_colorscale(self.tolerance_colorscale());
 /*			if(self.settingsViewModel.settings.plugins.bedlevelvisualizer.show_prusa_adjustments()) {
 				self.settingsViewModel.settings.plugins.bedlevelvisualizer.use_relative_offsets(true);
 				self.settingsViewModel.settings.plugins.bedlevelvisualizer.use_center_origin(true);
@@ -146,6 +149,7 @@ $(function () {
 			self.screws_bed_level_guide(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screws_bed_level_guide());
 			self.screw_reference_mode(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_mode());
 			self.screw_reference_index(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_index());
+			self.tolerance_colorscale(self.settingsViewModel.settings.plugins.bedlevelvisualizer.tolerance_colorscale());
 		};
 
 		self.onDataUpdaterPluginMessage = function (plugin, mesh_data) {
@@ -246,6 +250,11 @@ $(function () {
 			try {
 				var graphcolorscale = (self.settingsViewModel.settings.plugins.bedlevelvisualizer.colorscale().charAt(0) === "[") ? JSON.parse(self.settingsViewModel.settings.plugins.bedlevelvisualizer.colorscale()) : self.settingsViewModel.settings.plugins.bedlevelvisualizer.colorscale();
 				if (graphcolorscale.length === 0) graphcolorscale = [[0, "rebeccapurple"],[0.4, "rebeccapurple"],[0.45, "blue"],[0.5, "green"],[0.55, "yellow"],[0.6, "red"],[1, "red"]];
+				var toleranceZRange = [-0.25, 0.25];
+				if (self.tolerance_colorscale()) {
+					graphcolorscale = [[0,"#cc3333"],[0.1,"#ee4400"],[0.3,"#ee7700"],[0.4,"#aacc00"],[0.5,"#00bb44"],[0.6,"#aacc00"],[0.7,"#ee7700"],[0.9,"#ee4400"],[1,"#cc3333"]];
+					toleranceZRange = [-0.25, 0.25];
+				}
 				var data = [{
 						z: mesh_data_z,
 						x: mesh_data_x,
@@ -257,13 +266,17 @@ $(function () {
 							}
 						},
 						autocolorscale: false,
-						colorscale: graphcolorscale
+						colorscale: graphcolorscale,
+						cmin: self.tolerance_colorscale() ? toleranceZRange[0] : undefined,
+						cmax: self.tolerance_colorscale() ? toleranceZRange[1] : undefined
 					}
 				];
 
-				if(self.graph_z_limits().split(",")[0] !== 'auto'){
-					data[0]['cmin'] = self.graph_z_limits().split(",")[0];
-					data[0]['cmax'] = self.graph_z_limits().split(",")[1];
+				if (!self.tolerance_colorscale()) {
+					if(self.graph_z_limits().split(",")[0] !== 'auto'){
+						data[0]['cmin'] = self.graph_z_limits().split(",")[0];
+						data[0]['cmax'] = self.graph_z_limits().split(",")[1];
+					}
 				}
 
 				var background_color = $('#tabs_content').css('background-color');
@@ -301,7 +314,7 @@ $(function () {
 						},
 						zaxis: {
 							color: foreground_color,
-							range: (self.graph_z_limits().split(",")[0] !== 'auto') ? self.graph_z_limits().split(',') : [-2,2],
+							range: self.tolerance_colorscale() ? toleranceZRange : ((self.graph_z_limits().split(",")[0] !== 'auto') ? self.graph_z_limits().split(',') : [-2,2]),
 							zerolinecolor: '#0000FF',
 							zerolinewidth: 4
 						}
@@ -689,6 +702,9 @@ $(function () {
 				var turns = delta / pitch;
 				var absTurns = Math.abs(turns);
 				var ok = isRef || absTurns < 0.05;
+				var absDeltaMm = Math.abs(delta);
+				var tier = absDeltaMm < 0.05 ? 'ok' : (absDeltaMm < 0.2 ? 'warn' : 'critical');
+				if (isRef) tier = 'ok';
 				var tighten = (delta > 0) !== rev;
 
 				return {
@@ -699,6 +715,7 @@ $(function () {
 					delta: delta.toFixed(3),
 					turns: absTurns.toFixed(2),
 					ok: ok,
+					tier: tier,
 					tighten: tighten,
 					isRef: isRef,
 					outOfBounds: false,

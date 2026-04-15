@@ -111,6 +111,7 @@ class bedlevelvisualizer(
 			bed_level_screws=[],
 			screw_reference_mode='zero',
 			screw_reference_index=0,
+			tolerance_colorscale=False,
 		)
 
 	def get_settings_version(self):
