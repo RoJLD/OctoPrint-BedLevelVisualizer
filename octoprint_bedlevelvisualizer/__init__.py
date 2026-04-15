@@ -109,6 +109,8 @@ class bedlevelvisualizer(
 			show_prusa_adjustments=False,
 			screws_bed_level_guide=False,
 			bed_level_screws=[],
+			screw_reference_mode='zero',
+			screw_reference_index=0,
 		)
 
 	def get_settings_version(self):
