@@ -510,6 +510,66 @@ $(function () {
 
 				// graph surface
 				Plotly.react('bedlevelvisualizergraph', data, layout, config_options).then(self.postPlotHandler);
+				// Draw 2D heatmap side-by-side
+				try {
+					var heatmapColorscale = self.tolerance_colorscale()
+						? [[0,"#cc3333"],[0.1,"#ee4400"],[0.3,"#ee7700"],[0.4,"#aacc00"],[0.5,"#00bb44"],[0.6,"#aacc00"],[0.7,"#ee7700"],[0.9,"#ee4400"],[1,"#cc3333"]]
+						: graphcolorscale;
+					var heatmapZmin = self.tolerance_colorscale() ? toleranceZRange[0]
+						: (self.graph_z_limits().split(",")[0] !== 'auto' ? parseFloat(self.graph_z_limits().split(",")[0]) : undefined);
+					var heatmapZmax = self.tolerance_colorscale() ? toleranceZRange[1]
+						: (self.graph_z_limits().split(",")[0] !== 'auto' ? parseFloat(self.graph_z_limits().split(",")[1]) : undefined);
+					var heatmapData = [{
+						type: 'heatmap',
+						z: mesh_data_z,
+						x: mesh_data_x,
+						y: mesh_data_y,
+						colorscale: heatmapColorscale,
+						zmin: heatmapZmin,
+						zmax: heatmapZmax,
+						colorbar: { tickfont: { color: foreground_color } },
+						hoverongaps: false
+					}];
+					// Add screw position markers on heatmap if guide active
+					if (self.screws_bed_level_guide() && self.screw_corrections().length > 0) {
+						var hScrewXs = [], hScrewYs = [], hScrewTexts = [], hScrewColors = [];
+						var hCorrections = self.screw_corrections();
+						for (var hsi = 0; hsi < hCorrections.length; hsi++) {
+							var hsc = hCorrections[hsi];
+							if (!hsc.outOfBounds && !hsc.refInvalid && !hsc.pitchZero) {
+								hScrewXs.push(hsc.x);
+								hScrewYs.push(hsc.y);
+								hScrewColors.push(hsc.tier === 'critical' ? '#ee4444' : hsc.tier === 'warn' ? '#ff9900' : '#44dd66');
+								var hbadge = hsc.isRef ? 'REF' : (hsc.ok ? '\u2713' : (hsc.tighten ? '\u21bb' : '\u21ba') + ' ' + hsc.turns);
+								hScrewTexts.push(hsc.label + '<br>' + hbadge);
+							}
+						}
+						if (hScrewXs.length > 0) {
+							heatmapData.push({
+								type: 'scatter',
+								mode: 'markers+text',
+								x: hScrewXs,
+								y: hScrewYs,
+								text: hScrewTexts,
+								textposition: 'top center',
+								hoverinfo: 'text',
+								marker: { size: 10, color: hScrewColors, line: { color: '#fff', width: 1.5 } },
+								showlegend: false
+							});
+						}
+					}
+					var heatmapLayout = {
+						autosize: true,
+						plot_bgcolor: background_color,
+						paper_bgcolor: background_color,
+						margin: { l: 50, r: 10, b: 50, t: 20 },
+						xaxis: { color: foreground_color, title: 'X (mm)' },
+						yaxis: { color: foreground_color, title: 'Y (mm)' }
+					};
+					Plotly.react('bedlevelvisualizerheatmap', heatmapData, heatmapLayout, { displaylogo: false, responsive: true });
+				} catch(hErr) {
+					console.warn('Heatmap render error:', hErr);
+				}
 			} catch(err) {
 				new PNotify({
 						title: 'Bed Visualizer Error',
