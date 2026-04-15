@@ -534,6 +534,54 @@ $(function () {
 			return { z: z, outOfBounds: false };
 		};
 
+		self.screw_corrections = ko.computed(function() {
+			if (!self.screws_bed_level_guide()) { return []; }
+
+			var screws = self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws();
+			var xs = self.mesh_data_x();
+			var ys = self.mesh_data_y();
+			var zs = self.mesh_data();
+			var pitch = parseFloat(self.screw_hub()) || 0;
+			var rev = self.reverse();
+
+			if (!xs.length || !ys.length || !zs.length || !screws.length) { return []; }
+
+			return ko.utils.arrayMap(screws, function(screw) {
+				var label = ko.unwrap(screw.label) || '?';
+				var x = parseFloat(ko.unwrap(screw.x));
+				var y = parseFloat(ko.unwrap(screw.y));
+
+				if (pitch === 0) {
+					return { label: label, x: x, y: y, pitchZero: true, outOfBounds: false, ok: false };
+				}
+
+				var result = self.bilinearInterpolate(x, y, xs, ys, zs);
+				if (result.outOfBounds) {
+					return { label: label, x: x, y: y, outOfBounds: true, pitchZero: false, ok: false };
+				}
+
+				var turns = result.z / pitch;
+				var absTurns = Math.abs(turns);
+				var ok = absTurns < 0.05;
+				// Z > 0 → bed too high at that point → lower → tighten (↻)
+				// Z < 0 → bed too low → raise → loosen (↺)
+				// Reversed if reverse=true
+				var tighten = (result.z > 0) !== rev;
+
+				return {
+					label: label,
+					x: x,
+					y: y,
+					z: result.z.toFixed(3),
+					turns: absTurns.toFixed(2),
+					ok: ok,
+					tighten: tighten,
+					outOfBounds: false,
+					pitchZero: false
+				};
+			});
+		}, self);
+
 		self.addParameter = function(data) {
 			data.input.push({label: ko.observable(''), parameter: ko.observable(''), value: ko.observable('')});
 		};
