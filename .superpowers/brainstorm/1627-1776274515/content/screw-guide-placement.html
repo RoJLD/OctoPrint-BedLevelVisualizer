@@ -1,0 +1,115 @@
+<h2>Où afficher le guide d'ajustement des vis ?</h2>
+<p class="subtitle">Le guide montrera la correction à appliquer sur chaque vis (FL, FR, BR, BL) en degrés de rotation.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Sous le graphe 3D — sur l'onglet principal</h3>
+      <div class="mockup" style="margin-top:10px;">
+        <div class="mockup-header">Onglet Bed Visualizer</div>
+        <div class="mockup-body" style="padding:8px;">
+          <div class="placeholder" style="height:120px;background:#2a2a3a;color:#aaa;display:flex;align-items:center;justify-content:center;border-radius:4px;">📊 Graphe 3D surface</div>
+          <div style="margin-top:8px;border:1px solid #444;border-radius:4px;padding:8px;background:#1e2330;">
+            <div style="font-size:11px;color:#8af;font-weight:bold;margin-bottom:6px;">🔩 Guide d'ajustement des vis</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
+              <div style="background:#2a3a2a;border:1px solid #3a5a3a;border-radius:4px;padding:6px;text-align:center;">
+                <div style="color:#aaa;font-size:10px;">AVANT GAUCHE (FL)</div>
+                <div style="color:#f90;font-weight:bold;">↺ 0.75 tours</div>
+                <div style="color:#888;font-size:9px;">Desserrer</div>
+              </div>
+              <div style="background:#3a2a2a;border:1px solid #5a3a3a;border-radius:4px;padding:6px;text-align:center;">
+                <div style="color:#aaa;font-size:10px;">AVANT DROITE (FR)</div>
+                <div style="color:#4af;font-weight:bold;">↻ 0.25 tours</div>
+                <div style="color:#888;font-size:9px;">Serrer</div>
+              </div>
+              <div style="background:#2a2a3a;border:1px solid #3a3a5a;border-radius:4px;padding:6px;text-align:center;">
+                <div style="color:#aaa;font-size:10px;">ARRIÈRE GAUCHE (BL)</div>
+                <div style="color:#4c4;font-weight:bold;">✓ OK</div>
+                <div style="color:#888;font-size:9px;">Référence</div>
+              </div>
+              <div style="background:#3a2a2a;border:1px solid #5a3a3a;border-radius:4px;padding:6px;text-align:center;">
+                <div style="color:#aaa;font-size:10px;">ARRIÈRE DROITE (BR)</div>
+                <div style="color:#4af;font-weight:bold;">↻ 0.50 tours</div>
+                <div style="color:#888;font-size:9px;">Serrer</div>
+              </div>
+            </div>
+          </div>
+          <div class="placeholder" style="height:30px;margin-top:6px;background:#1e2330;display:flex;align-items:center;justify-content:center;font-size:11px;color:#aaa;">[ Update Mesh Now ]</div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>Pour</h4><ul><li>Visible immédiatement</li><li>Graph + guide en un coup d'œil</li></ul></div>
+        <div class="cons"><h4>Contre</h4><ul><li>Allonge l'onglet principal</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Nouvel onglet dédié dans les Settings</h3>
+      <div class="mockup" style="margin-top:10px;">
+        <div class="mockup-header">Settings → Bed Visualizer</div>
+        <div class="mockup-body" style="padding:8px;">
+          <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;">
+            <span style="background:#2a2a3a;border:1px solid #444;padding:3px 8px;border-radius:3px;font-size:10px;color:#aaa;">Collection</span>
+            <span style="background:#2a2a3a;border:1px solid #444;padding:3px 8px;border-radius:3px;font-size:10px;color:#aaa;">Visualization</span>
+            <span style="background:#2a2a3a;border:1px solid #444;padding:3px 8px;border-radius:3px;font-size:10px;color:#aaa;">Corrections</span>
+            <span style="background:#1a3a5a;border:1px solid #4af;padding:3px 8px;border-radius:3px;font-size:10px;color:#4af;font-weight:bold;">🔩 Vis</span>
+          </div>
+          <div style="border:1px dashed #444;border-radius:4px;padding:8px;background:#1a1a2a;">
+            <div style="font-size:10px;color:#8af;margin-bottom:4px;">Configuration des vis :</div>
+            <div style="font-size:10px;color:#666;">FL: x=30, y=30 | FR: x=280, y=30</div>
+            <div style="font-size:10px;color:#666;">BL: x=30, y=290 | BR: x=280, y=290</div>
+            <div style="font-size:10px;color:#666;margin-top:4px;">Pas de vis: M4 (0.7mm)</div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>Pour</h4><ul><li>Config + résultats au même endroit</li><li>Onglet principal épuré</li></ul></div>
+        <div class="cons"><h4>Contre</h4><ul><li>Doit ouvrir les settings pour voir le guide</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybride : guide sur l'onglet principal + config dans Settings</h3>
+      <div class="mockup" style="margin-top:10px;">
+        <div class="mockup-header">Onglet principal + Settings</div>
+        <div class="mockup-body" style="padding:8px;font-size:10px;color:#aaa;">
+          <div style="display:flex;gap:8px;">
+            <div style="flex:1;">
+              <div style="color:#8af;margin-bottom:4px;font-weight:bold;">Onglet principal</div>
+              <div class="placeholder" style="height:80px;display:flex;align-items:center;justify-content:center;">📊 Graphe 3D</div>
+              <div style="margin-top:4px;border:1px solid #4af;border-radius:3px;padding:4px;background:#1a2030;">
+                <div style="color:#4af;margin-bottom:3px;">🔩 Vis (affiché si activé)</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+                  <div style="background:#2a3a2a;padding:3px;text-align:center;border-radius:2px;">FL ↺0.75</div>
+                  <div style="background:#3a2a2a;padding:3px;text-align:center;border-radius:2px;">FR ↻0.25</div>
+                  <div style="background:#1a2a1a;padding:3px;text-align:center;border-radius:2px;">BL ✓</div>
+                  <div style="background:#3a2a2a;padding:3px;text-align:center;border-radius:2px;">BR ↻0.50</div>
+                </div>
+              </div>
+            </div>
+            <div style="flex:1;">
+              <div style="color:#8af;margin-bottom:4px;font-weight:bold;">Settings → Corrections</div>
+              <div style="border:1px solid #444;padding:4px;border-radius:3px;background:#1a1a2a;">
+                <div style="color:#fa8;margin-bottom:3px;">☑ Activer guide vis</div>
+                <div style="color:#666;">FL: 30,30  FR: 280,30</div>
+                <div style="color:#666;">BL: 30,290 BR: 280,290</div>
+                <div style="color:#666;">Pitch: M4 (0.7mm)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:8px;">
+        <div class="pros"><h4>Pour</h4><ul><li>Guide visible au bon moment</li><li>Config proprement séparée</li><li>Activable/désactivable</li></ul></div>
+        <div class="cons"><h4>Contre</h4><ul><li>Légèrement plus complexe</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

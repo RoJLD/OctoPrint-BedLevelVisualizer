@@ -1,0 +1,42 @@
+<h2>Design — Section 1 : Modèle de données</h2>
+<p class="subtitle">Nouveaux paramètres ajoutés au plugin (Python + Settings OctoPrint)</p>
+
+<div class="mockup">
+  <div class="mockup-header">__init__.py — get_settings_defaults()</div>
+  <div class="mockup-body" style="font-family:monospace;font-size:12px;padding:12px;background:#0d1117;color:#c9d1d9;">
+    <span style="color:#8b949e"># Paramètres existants conservés tels quels</span><br>
+    <span style="color:#8b949e"># Nouveaux paramètres ajoutés :</span><br><br>
+    <span style="color:#79c0ff">screws_bed_level_guide</span>: <span style="color:#a5d6ff">False</span>,  <span style="color:#8b949e"># Active le guide vis</span><br>
+    <span style="color:#79c0ff">bed_level_screws</span>: <span style="color:#a5d6ff">[]</span>,          <span style="color:#8b949e"># Liste de vis configurées</span><br><br>
+    <span style="color:#8b949e"># screw_hub existe déjà → pitch (ex: 0.7 pour M4)</span><br>
+    <span style="color:#8b949e"># reverse existe déjà → sens de vissage</span>
+  </div>
+</div>
+
+<div class="mockup" style="margin-top:16px;">
+  <div class="mockup-header">Structure d'une vis dans bed_level_screws</div>
+  <div class="mockup-body" style="font-family:monospace;font-size:12px;padding:12px;background:#0d1117;color:#c9d1d9;">
+    {<br>
+    &nbsp;&nbsp;<span style="color:#79c0ff">"label"</span>: <span style="color:#a5d6ff">"FL"</span>,    <span style="color:#8b949e"># Nom affiché (ex: FL, FR, BL, BR ou custom)</span><br>
+    &nbsp;&nbsp;<span style="color:#79c0ff">"x"</span>: <span style="color:#a5d6ff">30</span>,         <span style="color:#8b949e"># Coordonnée X en mm</span><br>
+    &nbsp;&nbsp;<span style="color:#79c0ff">"y"</span>: <span style="color:#a5d6ff">30</span>          <span style="color:#8b949e"># Coordonnée Y en mm</span><br>
+    }
+  </div>
+</div>
+
+<div style="margin-top:16px;">
+  <h3>Ce qui NE change PAS côté Python</h3>
+  <ul style="color:#aaa;font-size:13px;">
+    <li><code>screw_hub</code> — pitch déjà là, on le réutilise (M4 = 0.7mm)</li>
+    <li><code>reverse</code> — sens de vissage déjà géré</li>
+    <li><code>process_gcode()</code> — aucune modification, le mesh est collecté comme avant</li>
+    <li>Tout le calcul se fait côté <strong>JavaScript</strong> (interpolation du mesh existant)</li>
+  </ul>
+</div>
+
+<div style="margin-top:16px;border:1px solid #3a5a3a;border-radius:6px;padding:12px;background:#0d1a0d;">
+  <div style="color:#4c4;font-weight:bold;margin-bottom:6px;">✓ Avantage clé</div>
+  <div style="color:#aaa;font-size:13px;">
+    Zéro modification du backend Python de collecte du mesh. Les coordonnées des vis sont juste stockées dans la config — tout le calcul de correction est dans le JS du ViewModel Knockout.
+  </div>
+</div>
