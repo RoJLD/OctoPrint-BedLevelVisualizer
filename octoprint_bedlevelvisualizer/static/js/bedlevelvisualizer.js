@@ -74,6 +74,9 @@ $(function () {
 		self.tolerance_colorscale = ko.observable(false);
 		self.mesh_history_list = ko.observableArray([]);
 		self.bed_info = ko.observable({});
+		self.screw_probe_results = ko.observable({});
+		self.screw_workflow_active = ko.observable(false);
+		self.screw_workflow_step = ko.observable(-1);
 		self.screw_reference_mode = ko.observable('zero');
 		self.screw_reference_index = ko.observable(0);
 
@@ -156,6 +159,11 @@ $(function () {
 
 		self.onDataUpdaterPluginMessage = function (plugin, mesh_data) {
 			if (plugin !== "bedlevelvisualizer") {
+				return;
+			}
+
+			if (mesh_data.probe_result) {
+				self.handleProbeResult(mesh_data.probe_result);
 				return;
 			}
 
@@ -594,6 +602,56 @@ $(function () {
 			self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws.remove(data);
 		};
 
+		self.handleProbeResult = function(result) {
+			var key = result.x + ',' + result.y;
+			var current = self.screw_probe_results();
+			current[key] = { z: result.z, timestamp: new Date().toLocaleTimeString() };
+			self.screw_probe_results(Object.assign({}, current));
+
+			if (self.screw_workflow_active()) {
+				var step = self.screw_workflow_step();
+				var screws = self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws();
+				var nextStep = step + 1;
+				if (nextStep < screws.length) {
+					self.screw_workflow_step(nextStep);
+					var next = screws[nextStep];
+					var nx = parseFloat(ko.unwrap(next.x));
+					var ny = parseFloat(ko.unwrap(next.y));
+					OctoPrint.control.sendGcode(['G0 X' + nx + ' Y' + ny + ' F4000']);
+				} else {
+					self.screw_workflow_step(screws.length);
+					self.screw_workflow_active(false);
+				}
+			}
+		};
+
+		self.startScrewWorkflow = function() {
+			var screws = self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws();
+			if (!screws.length) { return; }
+			self.screw_probe_results({});
+			self.screw_workflow_step(0);
+			self.screw_workflow_active(true);
+			var first = screws[0];
+			OctoPrint.control.sendGcode(['G0 X' + parseFloat(ko.unwrap(first.x)) + ' Y' + parseFloat(ko.unwrap(first.y)) + ' F4000']);
+		};
+
+		self.stopScrewWorkflow = function() {
+			self.screw_workflow_active(false);
+			self.screw_workflow_step(-1);
+		};
+
+		self.probeCurrentScrew = function(screw) {
+			var x = parseFloat(ko.unwrap(screw.x));
+			var y = parseFloat(ko.unwrap(screw.y));
+			OctoPrint.control.sendGcode(['G30 X' + x + ' Y' + y]);
+		};
+
+		self.moveToScrew = function(screw) {
+			var x = parseFloat(ko.unwrap(screw.x));
+			var y = parseFloat(ko.unwrap(screw.y));
+			OctoPrint.control.sendGcode(['G0 X' + x + ' Y' + y + ' F4000']);
+		};
+
 		self.bilinearInterpolate = function(x, y, xs, ys, zs) {
 			// xs : tableau trié des coordonnées X du mesh (longueur = nb colonnes)
 			// ys : tableau trié des coordonnées Y du mesh (longueur = nb lignes)
@@ -707,6 +765,7 @@ $(function () {
 
 			var bed = self.bed_info();
 			var useCentered = !!(bed.center_origin);
+			var probeResults = self.screw_probe_results();
 
 			// Pass 1 : interpolate Z for each screw
 			var interpolated = ko.utils.arrayMap(screws, function(screw) {
@@ -716,10 +775,16 @@ $(function () {
 				var ix = useCentered ? x - bed.x_max / 2 : x;
 				var iy = useCentered ? y - bed.y_max / 2 : y;
 				var result = self.bilinearInterpolate(ix, iy, xs, ys, zs);
+				var probeKey = x + ',' + y;
+				var probeEntry = probeResults[probeKey];
+				var zValue = (probeEntry !== undefined) ? probeEntry.z : (result.outOfBounds ? null : result.z);
+				var outOfBounds = (probeEntry !== undefined) ? false : result.outOfBounds;
 				return {
 					label: label, x: x, y: y,
-					z: result.outOfBounds ? null : result.z,
-					outOfBounds: result.outOfBounds
+					z: zValue,
+					outOfBounds: outOfBounds,
+					isProbed: (probeEntry !== undefined),
+					probedAt: probeEntry ? probeEntry.timestamp : null
 				};
 			});
 
@@ -782,7 +847,9 @@ $(function () {
 					tighten: tighten,
 					isRef: isRef,
 					outOfBounds: false,
-					pitchZero: false
+					pitchZero: false,
+					isProbed: entry.isProbed || false,
+					probedAt: entry.probedAt || null
 				};
 			});
 		}, self);
