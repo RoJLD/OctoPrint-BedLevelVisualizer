@@ -541,7 +541,9 @@ $(function () {
 			var xs = self.mesh_data_x();
 			var ys = self.mesh_data_y();
 			var zs = self.mesh_data();
-			var pitch = parseFloat(self.screw_hub()) || 0;
+			var rawHub = parseFloat(self.screw_hub());
+			if (isNaN(rawHub)) { return []; }
+			var pitch = self.imperial() ? (rawHub !== 0 ? 25.4 / rawHub : 0) : rawHub;
 			var rev = self.reverse();
 
 			if (!xs.length || !ys.length || !zs.length || !screws.length) { return []; }
@@ -562,7 +564,7 @@ $(function () {
 
 				var turns = result.z / pitch;
 				var absTurns = Math.abs(turns);
-				var ok = absTurns < 0.05;
+				var ok = absTurns < 0.05; // < 1/20th turn considered level
 				// Z > 0 → bed too high at that point → lower → tighten (↻)
 				// Z < 0 → bed too low → raise → loosen (↺)
 				// Reversed if reverse=true
