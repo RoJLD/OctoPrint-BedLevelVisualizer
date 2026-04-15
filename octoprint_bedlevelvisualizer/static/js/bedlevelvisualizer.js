@@ -70,7 +70,7 @@ $(function () {
 			self);
 		self.turn = ko.observable(0);
 		self.graph_z_limits = ko.observable();
-		self.screws_bed_level_guide = ko.observable();
+		self.screws_bed_level_guide = ko.observable(false);
 
 		self.get_cell_text = function(item) {
 			return (!item.$parentContext.$parent.len?Math.abs(parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])):parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])).toFixed(item.$parentContext.$parent.len);
