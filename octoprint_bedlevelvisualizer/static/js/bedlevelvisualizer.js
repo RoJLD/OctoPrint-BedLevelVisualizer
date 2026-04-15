@@ -72,6 +72,8 @@ $(function () {
 		self.graph_z_limits = ko.observable();
 		self.screws_bed_level_guide = ko.observable(false);
 		self.bed_info = ko.observable({});
+		self.screw_reference_mode = ko.observable('zero');
+		self.screw_reference_index = ko.observable(0);
 
 		self.get_cell_text = function(item) {
 			return (!item.$parentContext.$parent.len?Math.abs(parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])):parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])).toFixed(item.$parentContext.$parent.len);
@@ -94,6 +96,8 @@ $(function () {
 			self.descending_y(self.settingsViewModel.settings.plugins.bedlevelvisualizer.descending_y());
 			self.graph_z_limits(self.settingsViewModel.settings.plugins.bedlevelvisualizer.graph_z_limits());
 			self.screws_bed_level_guide(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screws_bed_level_guide());
+			self.screw_reference_mode(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_mode());
+			self.screw_reference_index(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_index());
 		};
 
 		self.onAfterBinding = function() {
@@ -122,6 +126,8 @@ $(function () {
 			if(self.settingsViewModel.settings.plugins.bedlevelvisualizer.rotation().length === 0) {self.settingsViewModel.settings.plugins.bedlevelvisualizer.rotation(0);}
 			if(self.settingsViewModel.settings.plugins.bedlevelvisualizer.timeout().length === 0) {self.settingsViewModel.settings.plugins.bedlevelvisualizer.timeout(1800);}
 			self.settingsViewModel.settings.plugins.bedlevelvisualizer.screws_bed_level_guide(self.screws_bed_level_guide());
+			self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_mode(self.screw_reference_mode());
+			self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_index(self.screw_reference_index());
 /*			if(self.settingsViewModel.settings.plugins.bedlevelvisualizer.show_prusa_adjustments()) {
 				self.settingsViewModel.settings.plugins.bedlevelvisualizer.use_relative_offsets(true);
 				self.settingsViewModel.settings.plugins.bedlevelvisualizer.use_center_origin(true);
@@ -138,6 +144,8 @@ $(function () {
 			self.save_snapshots(self.settingsViewModel.settings.plugins.bedlevelvisualizer.save_snapshots());
 			self.graph_z_limits(self.settingsViewModel.settings.plugins.bedlevelvisualizer.graph_z_limits());
 			self.screws_bed_level_guide(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screws_bed_level_guide());
+			self.screw_reference_mode(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_mode());
+			self.screw_reference_index(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screw_reference_index());
 		};
 
 		self.onDataUpdaterPluginMessage = function (plugin, mesh_data) {
@@ -540,6 +548,56 @@ $(function () {
 				   + tx       * ty       * z11;
 
 			return { z: z, outOfBounds: false };
+		};
+
+		self.fitReferencePlane = function(points) {
+			var n = points.length;
+			if (n === 0) { return function() { return 0; }; }
+			if (n === 1) {
+				var z0 = points[0].z;
+				return function() { return z0; };
+			}
+			var sx = 0, sy = 0, sz = 0;
+			var sxx = 0, sxy = 0, sxz = 0;
+			var syy = 0, syz = 0;
+			for (var i = 0; i < n; i++) {
+				var xi = points[i].x, yi = points[i].y, zi = points[i].z;
+				sx  += xi;       sy  += yi;       sz  += zi;
+				sxx += xi * xi;  sxy += xi * yi;  sxz += xi * zi;
+				syy += yi * yi;  syz += yi * zi;
+			}
+			var M = [
+				[sxx, sxy, sx],
+				[sxy, syy, sy],
+				[sx,  sy,  n ]
+			];
+			var rhs = [sxz, syz, sz];
+			var aug = M.map(function(row, i) { return row.concat([rhs[i]]); });
+			for (var col = 0; col < 3; col++) {
+				var maxRow = col;
+				for (var row = col + 1; row < 3; row++) {
+					if (Math.abs(aug[row][col]) > Math.abs(aug[maxRow][col])) { maxRow = row; }
+				}
+				var tmp = aug[col]; aug[col] = aug[maxRow]; aug[maxRow] = tmp;
+				if (Math.abs(aug[col][col]) < 1e-12) { continue; }
+				for (var r = col + 1; r < 3; r++) {
+					var factor = aug[r][col] / aug[col][col];
+					for (var c2 = col; c2 <= 3; c2++) {
+						aug[r][c2] -= factor * aug[col][c2];
+					}
+				}
+			}
+			var sol = [0, 0, 0];
+			for (var i2 = 2; i2 >= 0; i2--) {
+				if (Math.abs(aug[i2][i2]) < 1e-12) { sol[i2] = 0; continue; }
+				sol[i2] = aug[i2][3];
+				for (var j2 = i2 + 1; j2 < 3; j2++) {
+					sol[i2] -= aug[i2][j2] * sol[j2];
+				}
+				sol[i2] /= aug[i2][i2];
+			}
+			var a = sol[0], b = sol[1], c = sol[2];
+			return function(x, y) { return a * x + b * y + c; };
 		};
 
 		self.screw_corrections = ko.computed(function() {
