@@ -71,6 +71,7 @@ $(function () {
 		self.turn = ko.observable(0);
 		self.graph_z_limits = ko.observable();
 		self.screws_bed_level_guide = ko.observable(false);
+		self.bed_info = ko.observable({});
 
 		self.get_cell_text = function(item) {
 			return (!item.$parentContext.$parent.len?Math.abs(parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])):parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])).toFixed(item.$parentContext.$parent.len);
@@ -183,6 +184,13 @@ $(function () {
 					self.mesh_data_x(x_data);
 					self.mesh_data_y(y_data);
 					self.mesh_data_z_height(mesh_data.bed.z_max);
+					self.bed_info({
+						x_max: mesh_data.bed.x_max,
+						y_max: mesh_data.bed.y_max,
+						type: mesh_data.bed.type,
+						center_origin: (mesh_data.bed.type === 'circular') ||
+									   self.settingsViewModel.settings.plugins.bedlevelvisualizer.use_center_origin()
+					});
 				}
 				return;
 			}
@@ -548,6 +556,9 @@ $(function () {
 
 			if (!xs.length || !ys.length || !zs.length || !screws.length) { return []; }
 
+			var bed = self.bed_info();
+			var useCentered = !!(bed.center_origin);
+
 			return ko.utils.arrayMap(screws, function(screw) {
 				var label = ko.unwrap(screw.label) || '?';
 				var x = parseFloat(ko.unwrap(screw.x));
@@ -557,7 +568,9 @@ $(function () {
 					return { label: label, x: x, y: y, pitchZero: true, outOfBounds: false, ok: false };
 				}
 
-				var result = self.bilinearInterpolate(x, y, xs, ys, zs);
+				var ix = useCentered ? x - bed.x_max / 2 : x;
+				var iy = useCentered ? y - bed.y_max / 2 : y;
+				var result = self.bilinearInterpolate(ix, iy, xs, ys, zs);
 				if (result.outOfBounds) {
 					return { label: label, x: x, y: y, outOfBounds: true, pitchZero: false, ok: false };
 				}
