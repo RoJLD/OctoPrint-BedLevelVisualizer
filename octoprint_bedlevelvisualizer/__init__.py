@@ -106,7 +106,9 @@ class bedlevelvisualizer(
 			camera_position="-1.25,-1.25,0.25",
 			date_locale_format="",
 			graph_height="450px",
-			show_prusa_adjustments=False
+			show_prusa_adjustments=False,
+			screws_bed_level_guide=False,
+			bed_level_screws=[],
 		)
 
 	def get_settings_version(self):
