@@ -687,6 +687,40 @@ $(function () {
 			self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws.remove(data);
 		};
 
+		self.autoConfigureScrews = function() {
+			var bed = self.bed_info();
+			if (!bed || (!bed.x_max && !bed.y_max)) {
+				new PNotify({ title: 'Auto-configure', text: 'No bed data available. Run a mesh first.', type: 'warning', hide: true });
+				return;
+			}
+			var margin = 30; // mm from edge
+			var xMax = bed.x_max || 200;
+			var yMax = bed.y_max || 200;
+			var configs;
+			if (bed.center_origin) {
+				var hx = xMax / 2, hy = yMax / 2;
+				configs = [
+					{ label: 'FL', x: Math.round(-hx + margin), y: Math.round(-hy + margin) },
+					{ label: 'FR', x: Math.round( hx - margin), y: Math.round(-hy + margin) },
+					{ label: 'BL', x: Math.round(-hx + margin), y: Math.round( hy - margin) },
+					{ label: 'BR', x: Math.round( hx - margin), y: Math.round( hy - margin) }
+				];
+			} else {
+				configs = [
+					{ label: 'FL', x: margin,         y: margin },
+					{ label: 'FR', x: xMax - margin,  y: margin },
+					{ label: 'BL', x: margin,         y: yMax - margin },
+					{ label: 'BR', x: xMax - margin,  y: yMax - margin }
+				];
+			}
+			var screwsList = self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws;
+			screwsList.removeAll();
+			ko.utils.arrayForEach(configs, function(c) {
+				screwsList.push({ label: ko.observable(c.label), x: ko.observable(c.x), y: ko.observable(c.y) });
+			});
+			new PNotify({ title: 'Auto-configure', text: 'Screws configured for ' + Math.round(xMax) + 'x' + Math.round(yMax) + 'mm bed (margin: ' + margin + 'mm).', type: 'success', hide: true });
+		};
+
 		self.handleProbeResult = function(result) {
 			// Find nearest configured screw within 2mm tolerance
 			var screws = self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws();
