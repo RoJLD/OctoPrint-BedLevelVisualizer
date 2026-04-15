@@ -611,44 +611,76 @@ $(function () {
 			if (isNaN(rawHub)) { return []; }
 			var pitch = self.imperial() ? (rawHub !== 0 ? 25.4 / rawHub : 0) : rawHub;
 			var rev = self.reverse();
+			var mode = self.screw_reference_mode();
+			var refIdx = parseInt(self.screw_reference_index(), 10);
 
 			if (!xs.length || !ys.length || !zs.length || !screws.length) { return []; }
 
 			var bed = self.bed_info();
 			var useCentered = !!(bed.center_origin);
 
-			return ko.utils.arrayMap(screws, function(screw) {
+			// Pass 1 : interpolate Z for each screw
+			var interpolated = ko.utils.arrayMap(screws, function(screw) {
 				var label = ko.unwrap(screw.label) || '?';
 				var x = parseFloat(ko.unwrap(screw.x));
 				var y = parseFloat(ko.unwrap(screw.y));
-
-				if (pitch === 0) {
-					return { label: label, x: x, y: y, pitchZero: true, outOfBounds: false, ok: false };
-				}
-
 				var ix = useCentered ? x - bed.x_max / 2 : x;
 				var iy = useCentered ? y - bed.y_max / 2 : y;
 				var result = self.bilinearInterpolate(ix, iy, xs, ys, zs);
-				if (result.outOfBounds) {
-					return { label: label, x: x, y: y, outOfBounds: true, pitchZero: false, ok: false };
+				return {
+					label: label, x: x, y: y,
+					z: result.outOfBounds ? null : result.z,
+					outOfBounds: result.outOfBounds
+				};
+			});
+
+			// Pass 2 : build reference function
+			var refZAt;
+			if (mode === 'screw') {
+				var refEntry = (refIdx >= 0 && refIdx < interpolated.length) ? interpolated[refIdx] : null;
+				var refZ = (refEntry && !refEntry.outOfBounds) ? refEntry.z : 0;
+				refZAt = function(x, y, idx) { return (refEntry && !refEntry.outOfBounds) ? refZ : 0; };
+			} else if (mode === 'plane') {
+				var validPoints = [];
+				for (var vi = 0; vi < interpolated.length; vi++) {
+					if (!interpolated[vi].outOfBounds) {
+						validPoints.push({ x: interpolated[vi].x, y: interpolated[vi].y, z: interpolated[vi].z });
+					}
+				}
+				var planeFn = self.fitReferencePlane(validPoints);
+				refZAt = function(x, y) { return planeFn(x, y); };
+			} else {
+				refZAt = function() { return 0; };
+			}
+
+			// Pass 3 : compute corrections
+			return ko.utils.arrayMap(interpolated, function(entry, idx) {
+				if (pitch === 0) {
+					return { label: entry.label, x: entry.x, y: entry.y,
+					         pitchZero: true, outOfBounds: false, ok: false, isRef: false };
+				}
+				if (entry.outOfBounds) {
+					return { label: entry.label, x: entry.x, y: entry.y,
+					         outOfBounds: true, pitchZero: false, ok: false, isRef: false };
 				}
 
-				var turns = result.z / pitch;
+				var isRef = (mode === 'screw' && idx === refIdx);
+				var delta = entry.z - refZAt(entry.x, entry.y, idx);
+				var turns = delta / pitch;
 				var absTurns = Math.abs(turns);
-				var ok = absTurns < 0.05; // < 1/20th turn considered level
-				// Z > 0 → bed too high at that point → lower → tighten (↻)
-				// Z < 0 → bed too low → raise → loosen (↺)
-				// Reversed if reverse=true
-				var tighten = (result.z > 0) !== rev;
+				var ok = isRef || absTurns < 0.05;
+				var tighten = (delta > 0) !== rev;
 
 				return {
-					label: label,
-					x: x,
-					y: y,
-					z: result.z.toFixed(3),
+					label: entry.label,
+					x: entry.x,
+					y: entry.y,
+					z: entry.z.toFixed(3),
+					delta: delta.toFixed(3),
 					turns: absTurns.toFixed(2),
 					ok: ok,
 					tighten: tighten,
+					isRef: isRef,
 					outOfBounds: false,
 					pitchZero: false
 				};
