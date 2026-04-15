@@ -208,6 +208,53 @@
 					<div class="control-group span4">
 					</div>
 				</div>
+				<hr/>
+				<div class="row-fluid" style="padding-top: 5px;">
+					<div class="control-group span12">
+						<input class="input-checkbox" type="checkbox"
+						       id="screws_bed_level_guide"
+						       title="Display a per-screw turn guide below the graph."
+						       data-toggle="tooltip"
+						       data-bind="checked: $root.screws_bed_level_guide"
+						       style="display: inline-block; margin-bottom: 5px;"/> Enable Screw Adjustment Guide
+					</div>
+				</div>
+				<div style="padding-top: 5px;" class="row-fluid" data-bind="visible: $root.screws_bed_level_guide">
+					<div class="control-group">
+						<label class="row-fluid" style="margin-bottom: 4px;">
+							<span class="span10" style="font-weight: bold;">Configured Screws</span>
+							<span class="span2" style="text-align: right;">
+								<button class="btn btn-mini" data-bind="click: $root.addScrew" title="Add screw">
+									<i class="fa fa-plus"></i> Add
+								</button>
+							</span>
+						</label>
+						<div data-bind="foreach: settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws">
+							<div class="row-fluid" style="margin-bottom: 4px;">
+								<div class="input-prepend input-append">
+									<span class="add-on">Label</span>
+									<input type="text" class="input-mini" style="width: 3em;"
+									       data-bind="value: label" placeholder="FL"/>
+									<span class="add-on">X</span>
+									<input type="number" class="input-mini" style="width: 4em;"
+									       data-bind="value: x"/>
+									<span class="add-on">Y</span>
+									<input type="number" class="input-mini" style="width: 4em;"
+									       data-bind="value: y"/>
+									<button class="btn btn-mini btn-danger"
+									        data-bind="click: $root.removeScrew"
+									        title="Remove screw">
+										<i class="fa fa-times"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+						<small class="help-block">
+							Pitch (mm/turn) is shared with <em>Adjustment Screw Details</em> above.
+							Leave the list empty to hide the guide.
+						</small>
+					</div>
+				</div>
 			</div>
 
 			<div id="bedlevelvisualizer_custom_commands" class="tab-pane">
