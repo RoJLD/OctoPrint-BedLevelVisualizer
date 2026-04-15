@@ -128,6 +128,7 @@ class bedlevelvisualizer(
 			print_start_alert=False,
 			print_start_alert_threshold=0.2,
 			mesh_freshness_hours=24,
+			auto_configure_margin=30,
 		)
 
 	def get_settings_version(self):

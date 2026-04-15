@@ -693,7 +693,7 @@ $(function () {
 				new PNotify({ title: 'Auto-configure', text: 'No bed data available. Run a mesh first.', type: 'warning', hide: true });
 				return;
 			}
-			var margin = 30; // mm from edge
+			var margin = parseFloat(self.settingsViewModel.settings.plugins.bedlevelvisualizer.auto_configure_margin()) || 30;
 			var xMax = bed.x_max || 200;
 			var yMax = bed.y_max || 200;
 			var configs;
