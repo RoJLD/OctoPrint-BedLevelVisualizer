@@ -272,6 +272,42 @@ $(function () {
 					}
 				];
 
+				// Add screw position markers if guide is active
+				if (self.screws_bed_level_guide() && self.screw_corrections().length > 0) {
+					var screwXs = [], screwYs = [], screwZs = [], screwTexts = [], screwColors = [];
+					var corrections = self.screw_corrections();
+					for (var si = 0; si < corrections.length; si++) {
+						var sc = corrections[si];
+						if (!sc.outOfBounds && !sc.refInvalid && !sc.pitchZero) {
+							screwXs.push(sc.x);
+							screwYs.push(sc.y);
+							screwZs.push(parseFloat(sc.z) || 0);
+							var badge = sc.isRef ? 'REF' : (sc.ok ? '\u2713' : (sc.tighten ? '\u21bb' : '\u21ba') + ' ' + sc.turns);
+							screwTexts.push(sc.label + '<br>' + badge + '<br>Z=' + sc.z + 'mm');
+							screwColors.push(sc.tier === 'critical' ? '#ee4444' : sc.tier === 'warn' ? '#ff9900' : '#44dd66');
+						}
+					}
+					if (screwXs.length > 0) {
+						data.push({
+							type: 'scatter3d',
+							mode: 'markers+text',
+							x: screwXs,
+							y: screwYs,
+							z: screwZs,
+							text: screwTexts,
+							textposition: 'top center',
+							hoverinfo: 'text',
+							marker: {
+								size: 8,
+								color: screwColors,
+								symbol: 'circle',
+								line: { color: '#ffffff', width: 1 }
+							},
+							showlegend: false
+						});
+					}
+				}
+
 				if (!self.tolerance_colorscale()) {
 					if(self.graph_z_limits().split(",")[0] !== 'auto'){
 						data[0]['cmin'] = self.graph_z_limits().split(",")[0];
@@ -722,6 +758,44 @@ $(function () {
 					pitchZero: false
 				};
 			});
+		}, self);
+
+		self.mesh_stats = ko.computed(function() {
+			var zs = self.mesh_data();
+			if (!zs.length) { return null; }
+			var flat = [];
+			for (var r = 0; r < zs.length; r++) {
+				for (var c = 0; c < zs[r].length; c++) {
+					flat.push(parseFloat(zs[r][c]));
+				}
+			}
+			if (!flat.length) { return null; }
+			var min = flat[0], max = flat[0], sum = 0, sumSq = 0;
+			for (var i = 0; i < flat.length; i++) {
+				if (flat[i] < min) min = flat[i];
+				if (flat[i] > max) max = flat[i];
+				sum += flat[i];
+				sumSq += flat[i] * flat[i];
+			}
+			var rms = Math.sqrt(sumSq / flat.length);
+			var pp = max - min;
+			var nOk = 0, nWarn = 0, nCrit = 0;
+			for (var j = 0; j < flat.length; j++) {
+				var az = Math.abs(flat[j]);
+				if (az < 0.05) nOk++;
+				else if (az < 0.2) nWarn++;
+				else nCrit++;
+			}
+			var n = flat.length;
+			var grade = pp < 0.05 ? 'A' : pp < 0.1 ? 'B' : pp < 0.2 ? 'C' : 'D';
+			return {
+				pp: pp.toFixed(3),
+				rms: rms.toFixed(3),
+				pctOk: Math.round(nOk / n * 100),
+				pctWarn: Math.round(nWarn / n * 100),
+				pctCrit: Math.round(nCrit / n * 100),
+				grade: grade
+			};
 		}, self);
 
 		self.addParameter = function(data) {

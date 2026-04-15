@@ -22,6 +22,44 @@
 	<div class="row-fluid" id="bedlevelvisualizergraph" data-bind="visible: !processing(), style: {'min-height': settingsViewModel.settings.plugins.bedlevelvisualizer.graph_height()}"></div>
 	<div class="row-fluid" style="text-align: center;padding-top: 20px;" data-bind="visible: loginStateViewModel.isUser() && !processing() && settingsViewModel.settings.plugins.bedlevelvisualizer.command() !== ''"><small data-bind="text: mesh_status"></small></div>
     <div class="row-fluid" id="bedlevelvisualizerbutton" style="text-align: center;"><button class="btn" data-bind="click: !processing() ? updateMesh : cancelMeshUpdate, enable: controlViewModel.isOperational() && !controlViewModel.isPrinting() && loginStateViewModel.isUser() && settingsViewModel.settings.plugins.bedlevelvisualizer.command() !== '', css: !processing() ? 'btn-primary' : 'btn-danger',attr: {'title': !processing() ? 'Run Mesh Update Process' : 'Cancel Mesh Update Process'}"><i class="icon-2 icon-info-sign" data-bind="attr: {'title': mesh_status}" data-toggle="tooltip"></i> <span data-bind="text: !processing() ? 'Update Mesh Now' : 'Cancel'"></span></button><button class="btn btn-mini pull-right" data-bind="click: function(){ settingsViewModel.show('#settings_plugin_bedlevelvisualizer'); }, visible: loginStateViewModel.isAdmin()"><i class="fa fa-gear"></i></button></div>
+    <!-- Mesh Statistics -->
+    <!-- ko if: $root.mesh_stats() -->
+    <div class="row-fluid" style="padding-top: 8px; padding-bottom: 4px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px;">
+            <div style="font-weight: bold; color: #aaa; margin-right: 4px;">
+                <i class="fa fa-bar-chart"></i> Flatness
+            </div>
+            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 3px 8px;">
+                <span style="color: #888;">P-P</span>
+                <span style="font-weight: bold; margin-left: 4px;"
+                      data-bind="text: $root.mesh_stats().pp + 'mm',
+                                 style: { color: parseFloat($root.mesh_stats().pp) < 0.05 ? '#5c5' :
+                                                parseFloat($root.mesh_stats().pp) < 0.2  ? '#f90' : '#e44' }"></span>
+            </div>
+            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 3px 8px;">
+                <span style="color: #888;">RMS</span>
+                <span style="font-weight: bold; margin-left: 4px;"
+                      data-bind="text: $root.mesh_stats().rms + 'mm'"></span>
+            </div>
+            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 3px 8px;">
+                <span style="color: #5c5; font-weight: bold;"
+                      data-bind="text: $root.mesh_stats().pctOk + '%'"></span>
+                <span style="color: #f90; margin-left: 4px; font-weight: bold;"
+                      data-bind="text: $root.mesh_stats().pctWarn + '%'"></span>
+                <span style="color: #e44; margin-left: 4px; font-weight: bold;"
+                      data-bind="text: $root.mesh_stats().pctCrit + '%'"></span>
+            </div>
+            <div style="border: 1px solid #555; border-radius: 4px; padding: 3px 10px; font-size: 13px; font-weight: bold;"
+                 data-bind="text: $root.mesh_stats().grade,
+                            style: { color: $root.mesh_stats().grade === 'A' ? '#5c5' :
+                                            $root.mesh_stats().grade === 'B' ? '#aacc00' :
+                                            $root.mesh_stats().grade === 'C' ? '#f90' : '#e44',
+                                     borderColor: $root.mesh_stats().grade === 'A' ? '#336633' :
+                                                  $root.mesh_stats().grade === 'B' ? '#445500' :
+                                                  $root.mesh_stats().grade === 'C' ? '#664400' : '#660000' }"></div>
+        </div>
+    </div>
+    <!-- /ko -->
     <!-- Screw Adjustment Guide -->
     <!-- ko if: $root.screws_bed_level_guide() && $root.screw_corrections().length > 0 -->
     <div class="row-fluid" style="padding-top: 12px;">
