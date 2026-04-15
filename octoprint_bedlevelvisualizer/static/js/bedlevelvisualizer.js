@@ -253,7 +253,6 @@ $(function () {
 					} else {
 						self.settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_timestamp(new Date().toLocaleString());
 					}
-					self.settingsViewModel.saveData();
 					// Push to mesh history (max 10 entries)
 					var histEntry = {
 						timestamp: new Date().toLocaleString(),
@@ -279,6 +278,7 @@ $(function () {
 					if (hist.length > 10) { hist = hist.slice(0, 10); }
 					self.mesh_history_list(hist);
 					self.settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_history(hist);
+					self.settingsViewModel.saveData();
 				}
 			}
 
@@ -603,9 +603,18 @@ $(function () {
 		};
 
 		self.handleProbeResult = function(result) {
-			var key = result.x + ',' + result.y;
+			// Find nearest configured screw within 2mm tolerance
+			var screws = self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws();
+			var bestKey = null, bestDist = Infinity;
+			for (var si = 0; si < screws.length; si++) {
+				var sx = parseFloat(ko.unwrap(screws[si].x));
+				var sy = parseFloat(ko.unwrap(screws[si].y));
+				var dist = Math.sqrt((sx - result.x) * (sx - result.x) + (sy - result.y) * (sy - result.y));
+				if (dist < bestDist) { bestDist = dist; bestKey = sx + ',' + sy; }
+			}
+			if (bestKey === null || bestDist > 2) { bestKey = result.x + ',' + result.y; }
 			var current = self.screw_probe_results();
-			current[key] = { z: result.z, timestamp: new Date().toLocaleTimeString() };
+			current[bestKey] = { z: result.z, timestamp: new Date().toLocaleTimeString() };
 			self.screw_probe_results(Object.assign({}, current));
 
 			if (self.screw_workflow_active()) {
