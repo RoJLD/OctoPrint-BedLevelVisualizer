@@ -1120,8 +1120,8 @@ $(function () {
 
 		self.thermal_drift = ko.computed(function() {
 			var hist = self.mesh_history_list();
-			var cold = hist.filter(function(e) { return e.bed_temp !== null && e.bed_temp !== undefined && e.bed_temp < 40; });
-			var hot  = hist.filter(function(e) { return e.bed_temp !== null && e.bed_temp !== undefined && e.bed_temp > 50; });
+			var cold = hist.filter(function(e) { return e.bed_temp !== null && e.bed_temp !== undefined && e.bed_temp < 40 && Array.isArray(e.mesh) && e.mesh.length > 0; });
+			var hot  = hist.filter(function(e) { return e.bed_temp !== null && e.bed_temp !== undefined && e.bed_temp > 50 && Array.isArray(e.mesh) && e.mesh.length > 0; });
 			if (!cold.length || !hot.length) { return null; }
 
 			function gridMean(entries) {
@@ -1163,7 +1163,8 @@ $(function () {
 			var ib = parseInt(self.mesh_diff_index_b());
 			if (hist.length < 2 || ia === ib || ia >= hist.length || ib >= hist.length) { return null; }
 			var a = hist[ia], b = hist[ib];
-			if (!a.mesh || !b.mesh || a.mesh.length !== b.mesh.length || a.mesh[0].length !== b.mesh[0].length) { return null; }
+			if (!a.mesh || !b.mesh || !a.mesh.length || !b.mesh.length) { return null; }
+			if (a.mesh.length !== b.mesh.length || !a.mesh[0] || !b.mesh[0] || a.mesh[0].length !== b.mesh[0].length) { return null; }
 			var diff = a.mesh.map(function(row, r) {
 				return row.map(function(z, c) { return (parseFloat(z) - parseFloat(b.mesh[r][c])).toFixed(4); });
 			});
