@@ -73,6 +73,35 @@
                  ? 'Corrections relative to anchor screw'
                  : 'Corrections relative to best-fit plane'"></div>
         <!-- /ko -->
+        <!-- Workflow controls -->
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+            <!-- ko ifnot: $root.screw_workflow_active() -->
+            <button class="btn btn-mini btn-primary"
+                    data-bind="click: $root.startScrewWorkflow,
+                               enable: $root.controlViewModel.isOperational() && !$root.processing() && $root.screw_corrections().length > 0"
+                    title="Moves to each screw, probes Z, then you can run a global verify">
+                <i class="fa fa-play"></i> Start screw workflow
+            </button>
+            <!-- /ko -->
+            <!-- ko if: $root.screw_workflow_active() -->
+            <button class="btn btn-mini btn-danger"
+                    data-bind="click: $root.stopScrewWorkflow">
+                <i class="fa fa-stop"></i> Stop
+            </button>
+            <span style="font-size: 10px; color: #aaa;"
+                  data-bind="text: $root.screw_workflow_step() < $root.screw_corrections().length
+                      ? 'Step ' + ($root.screw_workflow_step() + 1) + '/' + $root.screw_corrections().length + ' \u2014 adjust screw then Probe'
+                      : 'All screws probed \u2713'"></span>
+            <!-- /ko -->
+            <!-- ko if: $root.screw_workflow_step() >= $root.screw_corrections().length && $root.screw_corrections().length > 0 -->
+            <button class="btn btn-mini btn-success"
+                    data-bind="click: $root.updateMesh,
+                               enable: $root.controlViewModel.isOperational() && !$root.processing()"
+                    title="Run a full mesh update to verify the global result">
+                <i class="fa fa-check-circle"></i> Global mesh verify
+            </button>
+            <!-- /ko -->
+        </div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;"
              data-bind="foreach: $root.screw_corrections">
             <div data-bind="style: { borderColor: tier === 'critical' ? '#993333' : tier === 'warn' ? '#996600' : '#336633' }"
@@ -112,6 +141,10 @@
                      data-bind="text: isRef ? 'Anchor screw' : 'OK'"></div>
                 <div style="color: #777; font-size: 10px; margin-top: 4px;"
                      data-bind="text: 'Z = ' + z + 'mm'"></div>
+                <!-- ko if: isProbed -->
+                <div style="color: #4af; font-size: 9px; margin-top: 2px;"
+                     data-bind="text: '\u2299 probed ' + probedAt"></div>
+                <!-- /ko -->
                 <!-- /ko -->
 
                 <!-- ko if: !outOfBounds && !refInvalid && !pitchZero && !ok -->
@@ -123,7 +156,26 @@
                                  style: { color: tier === 'critical' ? '#ee4444' : tier === 'warn' ? '#ff9900' : '#44aaff' }"></div>
                 <div style="color: #777; font-size: 10px; margin-top: 4px;"
                      data-bind="text: 'Z = ' + z + 'mm'"></div>
+                <!-- ko if: isProbed -->
+                <div style="color: #4af; font-size: 9px; margin-top: 2px;"
+                     data-bind="text: '\u2299 probed ' + probedAt"></div>
                 <!-- /ko -->
+                <!-- /ko -->
+                <!-- Action buttons -->
+                <div style="display: flex; gap: 4px; justify-content: center; margin-top: 8px;">
+                    <button class="btn btn-mini"
+                            data-bind="click: function(){ $root.moveToScrew($root.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws()[$index()]); },
+                                       enable: $root.controlViewModel.isOperational() && !$root.processing()"
+                            title="Move nozzle above this screw">
+                        <i class="fa fa-crosshairs"></i>
+                    </button>
+                    <button class="btn btn-mini btn-info"
+                            data-bind="click: function(){ $root.probeCurrentScrew($root.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws()[$index()]); },
+                                       enable: $root.controlViewModel.isOperational() && !$root.processing()"
+                            title="Probe Z at this screw position (G30)">
+                        <i class="fa fa-dot-circle-o"></i> Probe
+                    </button>
+                </div>
             </div>
         </div>
     </div>
