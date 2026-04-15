@@ -54,6 +54,9 @@ class bedlevelvisualizer(
 		self.regex_nans = re.compile(r"^(nan\s?,?)+$")
 		self.regex_equal_signs = re.compile(r"^(=======\s?,?)+$")
 		self.regex_mesh_data_extraction = re.compile(r"(\+?-?\d*\.\d*)")
+		self.regex_probe_result = re.compile(
+			r"Bed X:\s*([-\d.]+)\s+Y:\s*([-\d.]+)\s+Z:\s*([-\d.]+)"
+		)
 		self.regex_old_marlin = re.compile(r"^(Bed x:.+)|(Llit x:.+)$")
 		self.regex_makergear = re.compile(
 			r"^(\s=\s\[)(\s*,?\s*\[(\s?-?\d+.\d+,?)+\])+\];?$"
@@ -238,6 +241,20 @@ class bedlevelvisualizer(
 			return line
 		if line.startswith("BLV"):
 			self._plugin_manager.send_plugin_message(self._identifier, {"BLV": line.strip()})
+			return line
+		# Detect single-point probe result (Marlin G30 response)
+		probe_match = self.regex_probe_result.search(line)
+		if probe_match:
+			try:
+				px = float(probe_match.group(1))
+				py = float(probe_match.group(2))
+				pz = float(probe_match.group(3))
+				self._plugin_manager.send_plugin_message(
+					self._identifier,
+					{"probe_result": {"x": px, "y": py, "z": pz}}
+				)
+			except (ValueError, IndexError):
+				pass
 			return line
 		if not self.processing:
 			return line
