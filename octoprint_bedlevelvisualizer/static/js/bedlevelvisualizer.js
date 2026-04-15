@@ -765,7 +765,7 @@ $(function () {
 			var safeZ = parseFloat(settings.safe_z_height()) || 5;
 			var first = screws[0];
 			var cmds = [];
-			if (doHome) { cmds.push('G28'); }
+			if (doHome) { cmds.push('G28 X Y'); }
 			cmds.push('G0 Z' + safeZ + ' F1000');
 			cmds.push('G0 X' + parseFloat(ko.unwrap(first.x)) + ' Y' + parseFloat(ko.unwrap(first.y)) + ' F4000');
 			OctoPrint.control.sendGcode(cmds);
