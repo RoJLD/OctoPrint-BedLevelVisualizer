@@ -79,6 +79,10 @@ $(function () {
 		self.screw_workflow_step = ko.observable(-1);
 		self.screw_reference_mode = ko.observable('zero');
 		self.screw_reference_index = ko.observable(0);
+		self.current_bed_temp = ko.observable(null);
+		self.klipper_screw_results = ko.observable({});
+		self.mesh_diff_index_a = ko.observable(0);
+		self.mesh_diff_index_b = ko.observable(1);
 
 		self.get_cell_text = function(item) {
 			return (!item.$parentContext.$parent.len?Math.abs(parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])):parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])).toFixed(item.$parentContext.$parent.len);
@@ -167,6 +171,23 @@ $(function () {
 				return;
 			}
 
+				if (mesh_data.klipper_screw_result) {
+					var kr = self.klipper_screw_results();
+					kr[mesh_data.klipper_screw_result.name] = mesh_data.klipper_screw_result;
+					self.klipper_screw_results(Object.assign({}, kr));
+					return;
+				}
+
+				if (mesh_data.print_alert) {
+					new PNotify({
+						title: 'Bed Level Alert',
+						text: mesh_data.print_alert.message,
+						type: mesh_data.print_alert.type === 'high_pp' ? 'error' : 'warning',
+						hide: false
+					});
+					return;
+				}
+
 			if (mesh_data.BLV) {
 				switch(mesh_data.BLV) {
 					case "BLVPROCESSINGON":
@@ -213,6 +234,9 @@ $(function () {
 						center_origin: (mesh_data.bed.type === 'circular') ||
 									   self.settingsViewModel.settings.plugins.bedlevelvisualizer.use_center_origin()
 					});
+					if (mesh_data.bed_temp !== undefined && mesh_data.bed_temp !== null) {
+						self.current_bed_temp(mesh_data.bed_temp);
+					}
 				}
 				return;
 			}
@@ -260,6 +284,7 @@ $(function () {
 						mesh_y: mesh_data_y.slice(),
 						mesh: JSON.parse(JSON.stringify(mesh_data_z)),
 						z_height: mesh_data_z_height,
+						bed_temp: self.current_bed_temp(),
 						pp: (function() {
 							var flat = [];
 							for (var rr = 0; rr < mesh_data_z.length; rr++)
@@ -899,6 +924,140 @@ $(function () {
 				pctCrit: Math.round(nCrit / n * 100),
 				grade: grade
 			};
+		}, self);
+		self.mesh_patterns = ko.computed(function() {
+			var zs = self.mesh_data();
+			var xs = self.mesh_data_x();
+			var ys = self.mesh_data_y();
+			if (!zs.length || !xs.length || !ys.length) { return null; }
+
+			var flat = [];
+			for (var r = 0; r < zs.length; r++)
+				for (var c = 0; c < zs[r].length; c++)
+					flat.push(parseFloat(zs[r][c]));
+
+			var patterns = [];
+
+			// Uniform tilt: fit plane and check if plane tilt dominates
+			var points = [];
+			for (var r2 = 0; r2 < zs.length; r2++)
+				for (var c2 = 0; c2 < zs[r2].length; c2++)
+					points.push({ x: xs[c2], y: ys[r2], z: parseFloat(zs[r2][c2]) });
+			var planeFn = self.fitReferencePlane(points);
+			var planeResiduals = points.map(function(p) { return p.z - planeFn(p.x, p.y); });
+			var residualRms = Math.sqrt(planeResiduals.reduce(function(s, v) { return s + v * v; }, 0) / planeResiduals.length);
+			var totalRms = Math.sqrt(flat.reduce(function(s, v) { return s + v * v; }, 0) / flat.length);
+			if (totalRms > 0.01 && residualRms < totalRms * 0.4) {
+				patterns.push('Uniform tilt detected');
+			}
+
+			// Center bulge/sag: compare center mean to corner mean
+			var centerRows = [Math.floor(zs.length / 2 - 0.5), Math.ceil(zs.length / 2 - 0.5)];
+			var centerCols = [Math.floor(zs[0].length / 2 - 0.5), Math.ceil(zs[0].length / 2 - 0.5)];
+			var centerVals = [];
+			centerRows.forEach(function(r3) { centerCols.forEach(function(c3) {
+				if (zs[r3] !== undefined && zs[r3][c3] !== undefined) centerVals.push(parseFloat(zs[r3][c3]));
+			}); });
+			if (!centerVals.length) { return patterns.length > 0 ? patterns : ['No significant pattern']; }
+			var cornerVals = [
+				parseFloat(zs[0][0]),
+				parseFloat(zs[0][zs[0].length - 1]),
+				parseFloat(zs[zs.length - 1][0]),
+				parseFloat(zs[zs.length - 1][zs[0].length - 1])
+			];
+			var centerMean = centerVals.reduce(function(s, v) { return s + v; }, 0) / centerVals.length;
+			var cornerMean = cornerVals.reduce(function(s, v) { return s + v; }, 0) / cornerVals.length;
+			var bulge = centerMean - cornerMean;
+			if (Math.abs(bulge) > 0.05) {
+				patterns.push(bulge > 0 ? 'Center bulge (+' + bulge.toFixed(3) + 'mm)' : 'Center sag (' + bulge.toFixed(3) + 'mm)');
+			}
+
+			// Dominant corner: find which corner has highest absolute value
+			var cornerLabels = ['Front-Left', 'Front-Right', 'Back-Left', 'Back-Right'];
+			var maxCornerIdx = 0;
+			for (var ci = 1; ci < cornerVals.length; ci++) {
+				if (Math.abs(cornerVals[ci]) > Math.abs(cornerVals[maxCornerIdx])) maxCornerIdx = ci;
+			}
+			if (Math.abs(cornerVals[maxCornerIdx]) > 0.05) {
+				patterns.push('Dominant corner: ' + cornerLabels[maxCornerIdx] + ' (' + cornerVals[maxCornerIdx].toFixed(3) + 'mm)');
+			}
+
+			return patterns.length > 0 ? patterns : ['No significant pattern'];
+		}, self);
+
+		self.screw_contribution = ko.computed(function() {
+			var corrections = self.screw_corrections();
+			if (!corrections.length) { return []; }
+			var totalAbs = corrections.reduce(function(s, sc) {
+				return s + ((!sc.outOfBounds && !sc.pitchZero && !sc.refInvalid && !sc.isRef) ? Math.abs(parseFloat(sc.delta)) : 0);
+			}, 0);
+			if (totalAbs < 1e-9) {
+				return corrections.map(function(sc) { return { label: sc.label, pct: 0, delta: sc.delta || '0.000', tier: sc.tier || 'ok', isRef: sc.isRef || false }; });
+			}
+			var ranked = corrections.map(function(sc) {
+				var pct = (!sc.outOfBounds && !sc.pitchZero && !sc.refInvalid && !sc.isRef)
+					? Math.round(Math.abs(parseFloat(sc.delta)) / totalAbs * 100)
+					: 0;
+				return { label: sc.label, pct: pct, delta: sc.delta || '0.000', tier: sc.tier || 'ok', isRef: sc.isRef || false };
+			});
+			ranked.sort(function(a, b) { return b.pct - a.pct; });
+			return ranked;
+		}, self);
+
+		self.thermal_drift = ko.computed(function() {
+			var hist = self.mesh_history_list();
+			var cold = hist.filter(function(e) { return e.bed_temp !== null && e.bed_temp !== undefined && e.bed_temp < 40; });
+			var hot  = hist.filter(function(e) { return e.bed_temp !== null && e.bed_temp !== undefined && e.bed_temp > 50; });
+			if (!cold.length || !hot.length) { return null; }
+
+			function gridMean(entries) {
+				var rows = entries[0].mesh.length, cols = entries[0].mesh[0].length;
+				var grid = [];
+				for (var gr = 0; gr < rows; gr++) {
+					grid.push([]);
+					for (var gc = 0; gc < cols; gc++) {
+						var vals = entries.map(function(e) { return parseFloat(e.mesh[gr][gc]); }).filter(function(v) { return !isNaN(v); });
+						grid[gr].push(vals.length ? vals.reduce(function(s, v) { return s + v; }, 0) / vals.length : 0);
+					}
+				}
+				return grid;
+			}
+
+			try {
+				var coldGrid = gridMean(cold);
+				var hotGrid  = gridMean(hot);
+				var diffs = [];
+				for (var dr = 0; dr < coldGrid.length; dr++)
+					for (var dc = 0; dc < coldGrid[dr].length; dc++)
+						diffs.push(hotGrid[dr][dc] - coldGrid[dr][dc]);
+				var meanDrift = diffs.reduce(function(s, v) { return s + v; }, 0) / diffs.length;
+				var maxDrift  = diffs.reduce(function(a, v) { return Math.abs(v) > Math.abs(a) ? v : a; }, 0);
+				return {
+					cold_count: cold.length,
+					hot_count: hot.length,
+					mean_drift: meanDrift.toFixed(3),
+					max_drift: maxDrift.toFixed(3)
+				};
+			} catch(e) {
+				return null;
+			}
+		}, self);
+
+		self.mesh_diff_data = ko.computed(function() {
+			var hist = self.mesh_history_list();
+			var ia = parseInt(self.mesh_diff_index_a());
+			var ib = parseInt(self.mesh_diff_index_b());
+			if (hist.length < 2 || ia === ib || ia >= hist.length || ib >= hist.length) { return null; }
+			var a = hist[ia], b = hist[ib];
+			if (!a.mesh || !b.mesh || a.mesh.length !== b.mesh.length || a.mesh[0].length !== b.mesh[0].length) { return null; }
+			var diff = a.mesh.map(function(row, r) {
+				return row.map(function(z, c) { return (parseFloat(z) - parseFloat(b.mesh[r][c])).toFixed(4); });
+			});
+			return { diff: diff, mesh_x: a.mesh_x, mesh_y: a.mesh_y, ts_a: a.timestamp, ts_b: b.timestamp };
+		}, self);
+
+		self.klipper_screw_results_array = ko.computed(function() {
+			return Object.values(self.klipper_screw_results());
 		}, self);
 
 		self.addParameter = function(data) {
