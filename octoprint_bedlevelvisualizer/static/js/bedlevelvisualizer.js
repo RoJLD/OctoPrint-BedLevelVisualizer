@@ -70,6 +70,7 @@ $(function () {
 			self);
 		self.turn = ko.observable(0);
 		self.graph_z_limits = ko.observable();
+		self.screws_bed_level_guide = ko.observable();
 
 		self.get_cell_text = function(item) {
 			return (!item.$parentContext.$parent.len?Math.abs(parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])):parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])).toFixed(item.$parentContext.$parent.len);
@@ -91,6 +92,7 @@ $(function () {
 			self.descending_x(self.settingsViewModel.settings.plugins.bedlevelvisualizer.descending_x());
 			self.descending_y(self.settingsViewModel.settings.plugins.bedlevelvisualizer.descending_y());
 			self.graph_z_limits(self.settingsViewModel.settings.plugins.bedlevelvisualizer.graph_z_limits());
+			self.screws_bed_level_guide(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screws_bed_level_guide());
 		};
 
 		self.onAfterBinding = function() {
@@ -118,6 +120,7 @@ $(function () {
 			if(self.settingsViewModel.settings.plugins.bedlevelvisualizer.colorscale().length === 0) { self.settingsViewModel.settings.plugins.bedlevelvisualizer.colorscale('[[0, "rebeccapurple"],[0.4, "rebeccapurple"],[0.45, "blue"],[0.5, "green"],[0.55, "yellow"],[0.6, "red"],[1, "red"]]');}
 			if(self.settingsViewModel.settings.plugins.bedlevelvisualizer.rotation().length === 0) {self.settingsViewModel.settings.plugins.bedlevelvisualizer.rotation(0);}
 			if(self.settingsViewModel.settings.plugins.bedlevelvisualizer.timeout().length === 0) {self.settingsViewModel.settings.plugins.bedlevelvisualizer.timeout(1800);}
+			self.settingsViewModel.settings.plugins.bedlevelvisualizer.screws_bed_level_guide(self.screws_bed_level_guide());
 /*			if(self.settingsViewModel.settings.plugins.bedlevelvisualizer.show_prusa_adjustments()) {
 				self.settingsViewModel.settings.plugins.bedlevelvisualizer.use_relative_offsets(true);
 				self.settingsViewModel.settings.plugins.bedlevelvisualizer.use_center_origin(true);
@@ -133,6 +136,7 @@ $(function () {
 			self.save_mesh(self.settingsViewModel.settings.plugins.bedlevelvisualizer.save_mesh());
 			self.save_snapshots(self.settingsViewModel.settings.plugins.bedlevelvisualizer.save_snapshots());
 			self.graph_z_limits(self.settingsViewModel.settings.plugins.bedlevelvisualizer.graph_z_limits());
+			self.screws_bed_level_guide(self.settingsViewModel.settings.plugins.bedlevelvisualizer.screws_bed_level_guide());
 		};
 
 		self.onDataUpdaterPluginMessage = function (plugin, mesh_data) {
@@ -484,6 +488,18 @@ $(function () {
 
 		self.removeCommand = function(data) {
 			self.settingsViewModel.settings.plugins.bedlevelvisualizer.commands.remove(data);
+		};
+
+		self.addScrew = function() {
+			self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws.push({
+				label: ko.observable(''),
+				x: ko.observable(0),
+				y: ko.observable(0)
+			});
+		};
+
+		self.removeScrew = function(data) {
+			self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws.remove(data);
 		};
 
 		self.addParameter = function(data) {
