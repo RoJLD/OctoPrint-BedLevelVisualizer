@@ -156,6 +156,63 @@
                                style="display: inline-block;margin-bottom: 5px;"/> Descending x-axis
 					</div>
 				</div>
+			<!-- P-P Evolution Chart -->
+			<hr/>
+			<div class="row-fluid" style="padding-top: 5px;">
+				<div class="control-group">
+					<label style="font-weight: bold; margin-bottom: 4px; display: block;">
+						<i class="fa fa-line-chart"></i> P-P Evolution
+					</label>
+					<!-- ko if: $root.mesh_history_list().length < 2 -->
+					<p class="muted" style="font-size: 12px;">At least 2 mesh entries required for the chart.</p>
+					<!-- /ko -->
+					<!-- ko if: $root.mesh_history_list().length >= 2 -->
+					<div>
+						<button class="btn btn-mini" data-bind="click: $root.drawPPChart">
+							<i class="fa fa-refresh"></i> Draw / Refresh
+						</button>
+					</div>
+					<div id="bedlevelvisualizer_pp_chart" style="height: 200px; margin-top: 8px;"></div>
+					<!-- /ko -->
+				</div>
+			</div>
+			<!-- Mesh Diff -->
+			<hr/>
+			<div class="row-fluid" style="padding-top: 5px;">
+				<div class="control-group">
+					<label style="font-weight: bold; margin-bottom: 4px; display: block;">
+						<i class="fa fa-exchange"></i> Mesh Diff
+					</label>
+					<!-- ko if: $root.mesh_history_list().length < 2 -->
+					<p class="muted" style="font-size: 12px;">At least 2 mesh entries required.</p>
+					<!-- /ko -->
+					<!-- ko if: $root.mesh_history_list().length >= 2 -->
+					<div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+						<span style="font-size: 11px; color: #888;">Mesh A:</span>
+						<select data-bind="value: $root.mesh_diff_index_a,
+						                   foreach: $root.mesh_history_list">
+							<option data-bind="text: timestamp + ' (P-P: ' + pp + 'mm)', value: $index()"></option>
+						</select>
+						<span style="font-size: 11px; color: #888;">vs B:</span>
+						<select data-bind="value: $root.mesh_diff_index_b,
+						                   foreach: $root.mesh_history_list">
+							<option data-bind="text: timestamp + ' (P-P: ' + pp + 'mm)', value: $index()"></option>
+						</select>
+						<button class="btn btn-mini btn-primary"
+						        data-bind="click: $root.drawDiffChart,
+						                   enable: $root.mesh_diff_data() !== null">
+							<i class="fa fa-eye"></i> Compare
+						</button>
+					</div>
+					<!-- ko if: $root.mesh_diff_data() -->
+					<div id="bedlevelvisualizer_diff_chart" style="height: 250px; margin-top: 8px;"></div>
+					<!-- /ko -->
+					<!-- ko ifnot: $root.mesh_diff_data() -->
+					<p class="muted" style="font-size: 11px; margin-top: 4px;">Select two different entries to compare.</p>
+					<!-- /ko -->
+					<!-- /ko -->
+				</div>
+			</div>
 			</div>
 				<hr/>
 				<div class="row-fluid" style="padding-top: 5px;">
@@ -333,6 +390,34 @@
 						</small>
 					</div>
 				</div>
+							<!-- Pre-print alert settings -->
+							<hr/>
+							<div class="row-fluid" style="padding-top: 5px;">
+								<div class="control-group span12">
+									<label style="font-weight: bold; margin-bottom: 4px; display: block;">Pre-print Alerts</label>
+									<input class="input-checkbox" type="checkbox"
+									       data-bind="checked: settingsViewModel.settings.plugins.bedlevelvisualizer.print_start_alert"
+									       style="display: inline-block; margin-bottom: 5px;"/> Enable pre-print mesh alerts
+								</div>
+								<div class="control-group span12" style="margin-top: 4px;"
+								     data-bind="visible: settingsViewModel.settings.plugins.bedlevelvisualizer.print_start_alert()">
+									<div class="input-prepend input-append" style="margin-bottom: 4px;">
+										<span class="add-on">P-P alert threshold</span>
+										<input type="number" min="0.01" max="5" step="0.05" class="input-mini text-right"
+										       data-bind="value: settingsViewModel.settings.plugins.bedlevelvisualizer.print_start_alert_threshold"/>
+										<span class="add-on">mm</span>
+									</div>
+									<div class="input-prepend input-append">
+										<span class="add-on">Mesh freshness</span>
+										<input type="number" min="1" max="720" step="1" class="input-mini text-right"
+										       data-bind="value: settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_freshness_hours"/>
+										<span class="add-on">hours</span>
+									</div>
+									<small class="help-block" style="margin-top: 4px;">
+										Alert if P-P exceeds threshold or mesh is older than specified hours when a print starts.
+									</small>
+								</div>
+							</div>
 			</div>
 
 			<div id="bedlevelvisualizer_custom_commands" class="tab-pane">

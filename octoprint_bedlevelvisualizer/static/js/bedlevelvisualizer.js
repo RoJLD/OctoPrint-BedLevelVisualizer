@@ -1148,6 +1148,68 @@ $(function () {
 			self.drawMesh(entry.mesh, false, entry.mesh_x, entry.mesh_y, entry.z_height);
 		};
 
+		self.drawPPChart = function() {
+			var hist = self.mesh_history_list();
+			if (!hist.length) { return; }
+			var timestamps = hist.map(function(e) { return e.timestamp; }).reverse();
+			var ppValues   = hist.map(function(e) { return parseFloat(e.pp); }).reverse();
+			var colors = ppValues.map(function(v) { return v < 0.05 ? '#55cc55' : v < 0.1 ? '#aacc00' : v < 0.2 ? '#ff9900' : '#ee4444'; });
+			var ppTrace = {
+				x: timestamps,
+				y: ppValues,
+				type: 'scatter',
+				mode: 'lines+markers',
+				line: { color: '#4af', width: 2 },
+				marker: { color: colors, size: 8 },
+				name: 'P-P (mm)',
+				hoverinfo: 'x+y'
+			};
+			var background_color = $('#tabs_content').css('background-color') || '#1a1a1a';
+			var foreground_color = $('#tabs_content').css('color') || '#cccccc';
+			var ppLayout = {
+				autosize: true,
+				plot_bgcolor: background_color,
+				paper_bgcolor: background_color,
+				margin: { l: 50, r: 20, b: 80, t: 20 },
+				xaxis: { color: foreground_color, tickangle: -40, automargin: true },
+				yaxis: { color: foreground_color, title: 'P-P (mm)', rangemode: 'tozero' },
+				shapes: [
+					{ type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 0.05, y1: 0.05, line: { color: '#55cc55', dash: 'dot', width: 1 } },
+					{ type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 0.1,  y1: 0.1,  line: { color: '#aacc00', dash: 'dot', width: 1 } },
+					{ type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 0.2,  y1: 0.2,  line: { color: '#ff9900', dash: 'dot', width: 1 } }
+				]
+			};
+			Plotly.react('bedlevelvisualizer_pp_chart', [ppTrace], ppLayout, { displaylogo: false, responsive: true });
+		};
+
+		self.drawDiffChart = function() {
+			var diffData = self.mesh_diff_data();
+			if (!diffData) { return; }
+			var diffTrace = {
+				type: 'surface',
+				z: diffData.diff,
+				x: diffData.mesh_x,
+				y: diffData.mesh_y,
+				colorscale: [[0,"#cc3333"],[0.25,"#ee7700"],[0.5,"#00bb44"],[0.75,"#ee7700"],[1,"#cc3333"]],
+				colorbar: { tickfont: { color: '#cccccc' } }
+			};
+			var background_color = $('#tabs_content').css('background-color') || '#1a1a1a';
+			var foreground_color = $('#tabs_content').css('color') || '#cccccc';
+			var diffLayout = {
+				autosize: true,
+				plot_bgcolor: background_color,
+				paper_bgcolor: background_color,
+				margin: { l: 0, r: 0, b: 0, t: 40 },
+				title: { text: 'Diff: ' + diffData.ts_a + ' vs ' + diffData.ts_b, font: { color: foreground_color, size: 11 } },
+				scene: {
+					xaxis: { color: foreground_color },
+					yaxis: { color: foreground_color },
+					zaxis: { color: foreground_color }
+				}
+			};
+			Plotly.react('bedlevelvisualizer_diff_chart', [diffTrace], diffLayout, { displaylogo: false, responsive: true });
+		};
+
 		self.runCustomCommand = function(data) {
 			var gcode_cmds = data.command().split("\n");
 			var parameters = {};
