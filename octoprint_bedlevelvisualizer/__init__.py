@@ -121,6 +121,8 @@ class bedlevelvisualizer(
 			bed_level_screws=[],
 			screw_reference_mode='zero',
 			screw_reference_index=0,
+			home_before_workflow=True,
+			safe_z_height=5,
 			tolerance_colorscale=False,
 			mesh_history=[],
 			print_start_alert=False,

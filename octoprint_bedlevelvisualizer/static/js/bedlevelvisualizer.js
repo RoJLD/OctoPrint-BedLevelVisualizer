@@ -745,7 +745,8 @@ $(function () {
 					var next = screws[nextStep];
 					var nx = parseFloat(ko.unwrap(next.x));
 					var ny = parseFloat(ko.unwrap(next.y));
-					OctoPrint.control.sendGcode(['G0 X' + nx + ' Y' + ny + ' F4000']);
+					var safeZ2 = parseFloat(self.settingsViewModel.settings.plugins.bedlevelvisualizer.safe_z_height()) || 5;
+					OctoPrint.control.sendGcode(['G0 Z' + safeZ2 + ' F1000', 'G0 X' + nx + ' Y' + ny + ' F4000']);
 				} else {
 					self.screw_workflow_step(screws.length);
 					self.screw_workflow_active(false);
@@ -759,8 +760,15 @@ $(function () {
 			self.screw_probe_results({});
 			self.screw_workflow_step(0);
 			self.screw_workflow_active(true);
+			var settings = self.settingsViewModel.settings.plugins.bedlevelvisualizer;
+			var doHome = settings.home_before_workflow();
+			var safeZ = parseFloat(settings.safe_z_height()) || 5;
 			var first = screws[0];
-			OctoPrint.control.sendGcode(['G0 X' + parseFloat(ko.unwrap(first.x)) + ' Y' + parseFloat(ko.unwrap(first.y)) + ' F4000']);
+			var cmds = [];
+			if (doHome) { cmds.push('G28'); }
+			cmds.push('G0 Z' + safeZ + ' F1000');
+			cmds.push('G0 X' + parseFloat(ko.unwrap(first.x)) + ' Y' + parseFloat(ko.unwrap(first.y)) + ' F4000');
+			OctoPrint.control.sendGcode(cmds);
 		};
 
 		self.stopScrewWorkflow = function() {
@@ -777,7 +785,8 @@ $(function () {
 		self.moveToScrew = function(screw) {
 			var x = parseFloat(ko.unwrap(screw.x));
 			var y = parseFloat(ko.unwrap(screw.y));
-			OctoPrint.control.sendGcode(['G0 X' + x + ' Y' + y + ' F4000']);
+			var safeZ3 = parseFloat(self.settingsViewModel.settings.plugins.bedlevelvisualizer.safe_z_height()) || 5;
+			OctoPrint.control.sendGcode(['G0 Z' + safeZ3 + ' F1000', 'G0 X' + x + ' Y' + y + ' F4000']);
 		};
 
 		self.bilinearInterpolate = function(x, y, xs, ys, zs) {
