@@ -37,10 +37,17 @@
         <!-- /ko -->
         <div style="display: flex; flex-wrap: wrap; gap: 8px;"
              data-bind="foreach: $root.screw_corrections">
-            <div style="flex: 1 1 calc(50% - 8px); min-width: 140px; border: 1px solid #555;
+            <div data-bind="style: { borderColor: tier === 'critical' ? '#993333' : tier === 'warn' ? '#996600' : '#336633' }"
+                 style="flex: 1 1 calc(50% - 8px); min-width: 140px; border: 1px solid #555;
                         border-radius: 6px; padding: 10px; text-align: center; box-sizing: border-box;">
                 <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 4px;"
                      data-bind="text: label + ' (x=' + x + ', y=' + y + ')'"></div>
+                <!-- ko if: !ok && !outOfBounds && !refInvalid && !pitchZero && !isRef -->
+                <div style="display:inline-block; font-size:9px; padding:1px 5px; border-radius:3px; margin-bottom:3px;"
+                     data-bind="text: tier === 'critical' ? 'CRITICAL' : 'WARNING',
+                                 style: { background: tier === 'critical' ? '#440000' : '#442200',
+                                          color: tier === 'critical' ? '#ff6666' : '#ffaa44' }"></div>
+                <!-- /ko -->
                 <!-- ko if: isRef -->
                 <div style="display:inline-block;background:#555;color:#ccc;font-size:10px;
                             padding:1px 6px;border-radius:3px;margin-bottom:4px;">REF</div>
@@ -72,10 +79,10 @@
                 <!-- ko if: !outOfBounds && !refInvalid && !pitchZero && !ok -->
                 <div style="font-size: 22px; font-weight: bold; margin: 4px 0;"
                      data-bind="text: (tighten ? '↻' : '↺') + ' ' + turns,
-                                 style: { color: tighten ? '#4af' : '#f90' }"></div>
+                                 style: { color: tier === 'critical' ? '#ee4444' : tier === 'warn' ? '#ff9900' : '#44aaff' }"></div>
                 <div style="font-size: 11px;"
                      data-bind="text: tighten ? 'turns — Tighten' : 'turns — Loosen',
-                                 style: { color: tighten ? '#4af' : '#f90' }"></div>
+                                 style: { color: tier === 'critical' ? '#ee4444' : tier === 'warn' ? '#ff9900' : '#44aaff' }"></div>
                 <div style="color: #777; font-size: 10px; margin-top: 4px;"
                      data-bind="text: 'Z = ' + z + 'mm'"></div>
                 <!-- /ko -->
