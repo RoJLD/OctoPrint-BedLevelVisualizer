@@ -502,6 +502,38 @@ $(function () {
 			self.settingsViewModel.settings.plugins.bedlevelvisualizer.bed_level_screws.remove(data);
 		};
 
+		self.bilinearInterpolate = function(x, y, xs, ys, zs) {
+			// xs : tableau trié des coordonnées X du mesh (longueur = nb colonnes)
+			// ys : tableau trié des coordonnées Y du mesh (longueur = nb lignes)
+			// zs : tableau 2D zs[j][i] = Z à (xs[i], ys[j])
+			if (xs.length < 2 || ys.length < 2) { return { outOfBounds: true }; }
+
+			var i0 = -1, i1 = -1;
+			for (var i = 0; i < xs.length - 1; i++) {
+				if (xs[i] <= x && x <= xs[i + 1]) { i0 = i; i1 = i + 1; break; }
+			}
+			var j0 = -1, j1 = -1;
+			for (var j = 0; j < ys.length - 1; j++) {
+				if (ys[j] <= y && y <= ys[j + 1]) { j0 = j; j1 = j + 1; break; }
+			}
+			if (i0 === -1 || j0 === -1) { return { outOfBounds: true }; }
+
+			var tx = (x - xs[i0]) / (xs[i1] - xs[i0]);
+			var ty = (y - ys[j0]) / (ys[j1] - ys[j0]);
+
+			var z00 = parseFloat(zs[j0][i0]);
+			var z10 = parseFloat(zs[j0][i1]);
+			var z01 = parseFloat(zs[j1][i0]);
+			var z11 = parseFloat(zs[j1][i1]);
+
+			var z = (1 - tx) * (1 - ty) * z00
+				   + tx       * (1 - ty) * z10
+				   + (1 - tx) * ty       * z01
+				   + tx       * ty       * z11;
+
+			return { z: z, outOfBounds: false };
+		};
+
 		self.addParameter = function(data) {
 			data.input.push({label: ko.observable(''), parameter: ko.observable(''), value: ko.observable('')});
 		};
