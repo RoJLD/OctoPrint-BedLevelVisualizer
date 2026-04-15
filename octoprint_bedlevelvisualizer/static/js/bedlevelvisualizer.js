@@ -889,8 +889,10 @@ $(function () {
 				if (!refEntry) {
 					// Reference screw index out of bounds — return error entries
 					return ko.utils.arrayMap(interpolated, function(entry) {
-						return { label: entry.label, x: entry.x, y: entry.y,
-						         refInvalid: true, outOfBounds: false, pitchZero: false, ok: false, isRef: false };
+						return { label: entry.label, x: entry.x, y: entry.y, z: '0.000',
+						         refInvalid: true, outOfBounds: false, pitchZero: false,
+						         ok: false, isRef: false, tier: 'ok', delta: '0.000',
+						         turns: '0.00', tighten: false, isProbed: false, probedAt: null };
 					});
 				}
 				var refZ = (!refEntry.outOfBounds) ? refEntry.z : 0;
@@ -911,12 +913,16 @@ $(function () {
 			// Pass 3 : compute corrections
 			return ko.utils.arrayMap(interpolated, function(entry, idx) {
 				if (pitch === 0) {
-					return { label: entry.label, x: entry.x, y: entry.y,
-					         pitchZero: true, outOfBounds: false, ok: false, isRef: false };
+					return { label: entry.label, x: entry.x, y: entry.y, z: '0.000',
+					         pitchZero: true, outOfBounds: false, refInvalid: false,
+					         ok: false, isRef: false, tier: 'ok', delta: '0.000',
+					         turns: '0.00', tighten: false, isProbed: false, probedAt: null };
 				}
 				if (entry.outOfBounds) {
-					return { label: entry.label, x: entry.x, y: entry.y,
-					         outOfBounds: true, pitchZero: false, ok: false, isRef: false };
+					return { label: entry.label, x: entry.x, y: entry.y, z: '0.000',
+					         outOfBounds: true, pitchZero: false, refInvalid: false,
+					         ok: false, isRef: false, tier: 'ok', delta: '0.000',
+					         turns: '0.00', tighten: false, isProbed: false, probedAt: null };
 				}
 
 				var isRef = (mode === 'screw' && idx === refIdx);
@@ -1117,7 +1123,9 @@ $(function () {
 		}, self);
 
 		self.klipper_screw_results_array = ko.computed(function() {
-			return Object.values(self.klipper_screw_results());
+			return Object.values(self.klipper_screw_results()).filter(function(e) {
+				return e && e.name;
+			});
 		}, self);
 
 		self.addParameter = function(data) {
