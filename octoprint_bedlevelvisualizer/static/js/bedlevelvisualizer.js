@@ -890,6 +890,7 @@ $(function () {
 					// Reference screw index out of bounds — return error entries
 					return ko.utils.arrayMap(interpolated, function(entry) {
 						return { label: entry.label, x: entry.x, y: entry.y, z: '0.000',
+						         display_state: 'refInvalid',
 						         refInvalid: true, outOfBounds: false, pitchZero: false,
 						         ok: false, isRef: false, tier: 'ok', delta: '0.000',
 						         turns: '0.00', tighten: false, isProbed: false, probedAt: null };
@@ -914,12 +915,14 @@ $(function () {
 			return ko.utils.arrayMap(interpolated, function(entry, idx) {
 				if (pitch === 0) {
 					return { label: entry.label, x: entry.x, y: entry.y, z: '0.000',
+					         display_state: 'pitchZero',
 					         pitchZero: true, outOfBounds: false, refInvalid: false,
 					         ok: false, isRef: false, tier: 'ok', delta: '0.000',
 					         turns: '0.00', tighten: false, isProbed: false, probedAt: null };
 				}
 				if (entry.outOfBounds) {
 					return { label: entry.label, x: entry.x, y: entry.y, z: '0.000',
+					         display_state: 'outOfBounds',
 					         outOfBounds: true, pitchZero: false, refInvalid: false,
 					         ok: false, isRef: false, tier: 'ok', delta: '0.000',
 					         turns: '0.00', tighten: false, isProbed: false, probedAt: null };
@@ -940,6 +943,7 @@ $(function () {
 					x: entry.x,
 					y: entry.y,
 					z: entry.z.toFixed(3),
+					display_state: isRef ? 'ref' : (ok ? 'ok' : 'adjust'),
 					delta: delta.toFixed(3),
 					turns: absTurns.toFixed(2),
 					ok: ok,
@@ -948,6 +952,7 @@ $(function () {
 					isRef: isRef,
 					outOfBounds: false,
 					pitchZero: false,
+					refInvalid: false,
 					isProbed: entry.isProbed || false,
 					probedAt: entry.probedAt || null
 				};
