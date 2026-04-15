@@ -51,12 +51,17 @@
                 <div style="color: #f90; font-size: 11px;">Out of mesh area</div>
                 <!-- /ko -->
 
-                <!-- ko if: !outOfBounds && pitchZero -->
+                <!-- ko if: refInvalid -->
+                <div style="color: #f90; font-size: 16px; font-weight: bold;">&#9888;</div>
+                <div style="color: #f90; font-size: 11px;">Ref screw invalid</div>
+                <!-- /ko -->
+
+                <!-- ko if: !outOfBounds && !refInvalid && pitchZero -->
                 <div style="color: #f90; font-size: 16px; font-weight: bold;">⚠</div>
                 <div style="color: #f90; font-size: 11px;">Pitch = 0, check settings</div>
                 <!-- /ko -->
 
-                <!-- ko if: !outOfBounds && !pitchZero && ok -->
+                <!-- ko if: !outOfBounds && !refInvalid && !pitchZero && ok -->
                 <div style="color: #5c5; font-size: 22px; font-weight: bold; margin: 4px 0;">✓</div>
                 <div style="color: #5c5; font-size: 11px;"
                      data-bind="text: isRef ? 'Anchor screw' : 'OK'"></div>
@@ -64,7 +69,7 @@
                      data-bind="text: 'Z = ' + z + 'mm'"></div>
                 <!-- /ko -->
 
-                <!-- ko if: !outOfBounds && !pitchZero && !ok -->
+                <!-- ko if: !outOfBounds && !refInvalid && !pitchZero && !ok -->
                 <div style="font-size: 22px; font-weight: bold; margin: 4px 0;"
                      data-bind="text: (tighten ? '↻' : '↺') + ' ' + turns,
                                  style: { color: tighten ? '#4af' : '#f90' }"></div>

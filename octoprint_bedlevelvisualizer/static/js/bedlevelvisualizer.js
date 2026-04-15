@@ -557,6 +557,19 @@ $(function () {
 				var z0 = points[0].z;
 				return function() { return z0; };
 			}
+			if (n === 2) {
+				var dx = points[1].x - points[0].x;
+				var dy = points[1].y - points[0].y;
+				var dz = points[1].z - points[0].z;
+				var d2 = dx * dx + dy * dy;
+				if (d2 < 1e-12) {
+					var zavg2 = (points[0].z + points[1].z) / 2;
+					return function() { return zavg2; };
+				}
+				var a2 = dz * dx / d2, b2 = dz * dy / d2;
+				var c2 = points[0].z - a2 * points[0].x - b2 * points[0].y;
+				return function(x2, y2) { return a2 * x2 + b2 * y2 + c2; };
+			}
 			var sx = 0, sy = 0, sz = 0;
 			var sxx = 0, sxy = 0, sxz = 0;
 			var syy = 0, syz = 0;
@@ -638,8 +651,15 @@ $(function () {
 			var refZAt;
 			if (mode === 'screw') {
 				var refEntry = (refIdx >= 0 && refIdx < interpolated.length) ? interpolated[refIdx] : null;
-				var refZ = (refEntry && !refEntry.outOfBounds) ? refEntry.z : 0;
-				refZAt = function(x, y, idx) { return (refEntry && !refEntry.outOfBounds) ? refZ : 0; };
+				if (!refEntry) {
+					// Reference screw index out of bounds — return error entries
+					return ko.utils.arrayMap(interpolated, function(entry) {
+						return { label: entry.label, x: entry.x, y: entry.y,
+						         refInvalid: true, outOfBounds: false, pitchZero: false, ok: false, isRef: false };
+					});
+				}
+				var refZ = (!refEntry.outOfBounds) ? refEntry.z : 0;
+				refZAt = function(x, y, idx) { return refZ; };
 			} else if (mode === 'plane') {
 				var validPoints = [];
 				for (var vi = 0; vi < interpolated.length; vi++) {
