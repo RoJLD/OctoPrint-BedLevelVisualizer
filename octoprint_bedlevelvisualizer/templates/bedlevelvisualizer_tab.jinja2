@@ -24,7 +24,10 @@
 		<div id="bedlevelvisualizerheatmap" style="flex: 1; min-width: 0;" data-bind="style: {'min-height': settingsViewModel.settings.plugins.bedlevelvisualizer.graph_height()}"></div>
 	</div>
 	<div class="row-fluid" style="text-align: center;padding-top: 20px;" data-bind="visible: loginStateViewModel.isUser() && !processing() && settingsViewModel.settings.plugins.bedlevelvisualizer.command() !== ''"><small data-bind="text: mesh_status"></small></div>
-    <div class="row-fluid" id="bedlevelvisualizerbutton" style="text-align: center;"><button class="btn" data-bind="click: !processing() ? updateMesh : cancelMeshUpdate, enable: controlViewModel.isOperational() && !controlViewModel.isPrinting() && loginStateViewModel.isUser() && settingsViewModel.settings.plugins.bedlevelvisualizer.command() !== '', css: !processing() ? 'btn-primary' : 'btn-danger',attr: {'title': !processing() ? 'Run Mesh Update Process' : 'Cancel Mesh Update Process'}"><i class="icon-2 icon-info-sign" data-bind="attr: {'title': mesh_status}" data-toggle="tooltip"></i> <span data-bind="text: !processing() ? 'Update Mesh Now' : 'Cancel'"></span></button><button class="btn btn-mini pull-right" data-bind="click: function(){ settingsViewModel.show('#settings_plugin_bedlevelvisualizer'); }, visible: loginStateViewModel.isAdmin()"><i class="fa fa-gear"></i></button></div>
+    <div class="row-fluid" id="bedlevelvisualizerbutton" style="text-align: center;"><button class="btn" data-bind="click: !processing() ? updateMesh : cancelMeshUpdate, enable: controlViewModel.isOperational() && !controlViewModel.isPrinting() && loginStateViewModel.isUser() && settingsViewModel.settings.plugins.bedlevelvisualizer.command() !== '', css: !processing() ? 'btn-primary' : 'btn-danger',attr: {'title': !processing() ? 'Run Mesh Update Process' : 'Cancel Mesh Update Process'}"><i class="icon-2 icon-info-sign" data-bind="attr: {'title': mesh_status}" data-toggle="tooltip"></i> <span data-bind="text: !processing() ? 'Update Mesh Now' : 'Cancel'"></span></button><button class="btn btn-mini" style="margin-left: 6px;"
+        data-bind="click: function(){ OctoPrint.control.sendGcode(['M420 V']); },
+                   enable: $root.controlViewModel.isOperational() && !$root.processing()"
+        title="Request Marlin M420 V — re-sends stored bed mesh to terminal">M420 V</button><button class="btn btn-mini pull-right" data-bind="click: function(){ settingsViewModel.show('#settings_plugin_bedlevelvisualizer'); }, visible: loginStateViewModel.isAdmin()"><i class="fa fa-gear"></i></button></div>
     <!-- Mesh Statistics -->
     <!-- ko if: $root.mesh_stats() -->
     <div class="row-fluid" style="padding-top: 8px; padding-bottom: 4px;">
@@ -60,6 +63,35 @@
                                      borderColor: $root.mesh_stats().grade === 'A' ? '#336633' :
                                                   $root.mesh_stats().grade === 'B' ? '#445500' :
                                                   $root.mesh_stats().grade === 'C' ? '#664400' : '#660000' }"></div>
+        </div>
+    </div>
+    <!-- /ko -->
+    <!-- Pattern Detection & Thermal Drift -->
+    <!-- ko if: $root.mesh_patterns() -->
+    <div class="row-fluid" style="padding-top: 4px; padding-bottom: 4px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 10px;">
+            <div style="font-weight: bold; color: #aaa; margin-right: 4px;">
+                <i class="fa fa-search"></i> Patterns
+            </div>
+            <!-- ko foreach: $root.mesh_patterns() -->
+            <div style="background: #1a1a1a; border: 1px solid #444; border-radius: 3px; padding: 2px 7px; color: #ccc;"
+                 data-bind="text: $data"></div>
+            <!-- /ko -->
+        </div>
+    </div>
+    <!-- /ko -->
+    <!-- ko if: $root.thermal_drift() -->
+    <div class="row-fluid" style="padding-bottom: 4px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 10px;">
+            <div style="font-weight: bold; color: #aaa; margin-right: 4px;">
+                <i class="fa fa-thermometer-half"></i> Thermal drift
+            </div>
+            <div style="background: #1a1a1a; border: 1px solid #444; border-radius: 3px; padding: 2px 7px;"
+                 data-bind="text: 'Mean: ' + $root.thermal_drift().mean_drift + 'mm'"></div>
+            <div style="background: #1a1a1a; border: 1px solid #444; border-radius: 3px; padding: 2px 7px;"
+                 data-bind="text: 'Max: ' + $root.thermal_drift().max_drift + 'mm'"></div>
+            <div style="color: #888;"
+                 data-bind="text: '(' + $root.thermal_drift().cold_count + ' cold / ' + $root.thermal_drift().hot_count + ' hot mesh)'"></div>
         </div>
     </div>
     <!-- /ko -->
@@ -181,6 +213,55 @@
                 </div>
             </div>
         </div>
+        <!-- Screw Contribution Ranking -->
+        <!-- ko if: $root.screw_contribution().length > 0 -->
+        <div style="margin-top: 12px;">
+            <div style="font-size: 10px; font-weight: bold; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;">
+                Deviation ranking
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <!-- ko foreach: $root.screw_contribution() -->
+                <!-- ko ifnot: isRef -->
+                <div style="background: #1a1a1a; border-radius: 4px; padding: 2px 8px; font-size: 10px; border: 1px solid #333;">
+                    <span style="color: #888;" data-bind="text: label"></span>
+                    <span style="margin-left: 4px; font-weight: bold;"
+                          data-bind="text: pct + '%',
+                                     style: { color: tier === 'critical' ? '#ee4444' : tier === 'warn' ? '#ff9900' : '#55cc55' }"></span>
+                    <span style="color: #666; margin-left: 2px;" data-bind="text: '(' + delta + 'mm)'"></span>
+                </div>
+                <!-- /ko -->
+                <!-- ko if: isRef -->
+                <div style="background: #1a1a1a; border-radius: 4px; padding: 2px 8px; font-size: 10px; border: 1px solid #555; color: #888;">
+                    <span data-bind="text: label"></span>
+                    <span style="margin-left: 4px; color: #aaa;">REF</span>
+                </div>
+                <!-- /ko -->
+                <!-- /ko -->
+            </div>
+        </div>
+        <!-- /ko -->
+        <!-- Klipper SCREWS_TILT_CALCULATE results -->
+        <!-- ko if: $root.klipper_screw_results_array().length > 0 -->
+        <div style="margin-top: 10px;">
+            <div style="font-size: 10px; font-weight: bold; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;">
+                Klipper screw tilt results
+                <button class="btn btn-mini" style="margin-left: 8px;"
+                        data-bind="click: function(){ $root.klipper_screw_results({}); }">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <!-- ko foreach: $root.klipper_screw_results_array() -->
+                <div style="background: #1a1a1a; border-radius: 4px; padding: 2px 8px; font-size: 10px; border: 1px solid #333;">
+                    <span style="color: #888;" data-bind="text: name"></span>
+                    <span style="margin-left: 4px; font-weight: bold; color: #4af;"
+                          data-bind="text: direction + ' ' + amount"></span>
+                    <span style="color: #666; margin-left: 2px;" data-bind="text: '(z=' + z.toFixed(3) + ')'"></span>
+                </div>
+                <!-- /ko -->
+            </div>
+        </div>
+        <!-- /ko -->
     </div>
     <!-- /ko -->
 </div>
