@@ -310,7 +310,7 @@ $(function () {
 					    var currentPP  = parseFloat(hist[0].pp);
 					    var previousPP = parseFloat(hist[1].pp);
 					    var degradeThreshold = parseFloat(self.settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_degradation_threshold()) || 20;
-					    if (previousPP > 0) {
+					    if (previousPP > 0 && !isNaN(currentPP)) {
 					        var increasePercent = ((currentPP - previousPP) / previousPP) * 100;
 					        if (increasePercent > degradeThreshold) {
 					            new PNotify({
