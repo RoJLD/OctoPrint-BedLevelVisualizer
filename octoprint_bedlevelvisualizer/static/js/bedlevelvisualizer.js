@@ -81,8 +81,8 @@ $(function () {
 		self.screw_reference_index = ko.observable(0);
 		self.current_bed_temp = ko.observable(null);
 		self.klipper_screw_results = ko.observable({});
-		self.mesh_diff_index_a = ko.observable(0);
-		self.mesh_diff_index_b = ko.observable(1);
+		self.mesh_diff_index_a = ko.observable("0");
+		self.mesh_diff_index_b = ko.observable("1");
 
 		self.get_cell_text = function(item) {
 			return (!item.$parentContext.$parent.len?Math.abs(parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])):parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])).toFixed(item.$parentContext.$parent.len);
@@ -1307,8 +1307,12 @@ $(function () {
 
 		self.mesh_diff_data.subscribe(function(newVal) {
 			if (newVal) {
-				self.drawDiffChart('bedlevelvisualizer_diff_chart_tab');
-				self.drawDiffChart('bedlevelvisualizer_diff_chart');
+				if (document.getElementById('bedlevelvisualizer_diff_chart_tab')) {
+					self.drawDiffChart('bedlevelvisualizer_diff_chart_tab');
+				}
+				if (document.getElementById('bedlevelvisualizer_diff_chart')) {
+					self.drawDiffChart('bedlevelvisualizer_diff_chart');
+				}
 			}
 		});
 
