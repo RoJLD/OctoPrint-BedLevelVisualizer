@@ -337,24 +337,35 @@
         </div>
         <!-- /ko -->
         <!-- Klipper SCREWS_TILT_CALCULATE results -->
-        <!-- ko if: $root.klipper_screw_results_array().length > 0 -->
-        <div style="margin-top: 10px;">
-            <div style="font-size: 10px; font-weight: bold; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px;">
-                Klipper screw tilt results
+        <!-- ko if: $root.klipper_screw_results_display().length > 0 -->
+        <div style="margin-top: 12px;">
+            <div style="font-size: 11px; font-weight: bold; color: #aaa; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">
+                <i class="fa fa-wrench"></i> Klipper SCREWS_TILT Results
                 <button class="btn btn-mini" style="margin-left: 8px;"
                         data-bind="click: function(){ $root.klipper_screw_results({}); }">
                     <i class="fa fa-times"></i>
                 </button>
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                <!-- ko foreach: $root.klipper_screw_results_array() -->
-                <div style="background: #1a1a1a; border-radius: 4px; padding: 2px 8px; font-size: 10px; border: 1px solid #333;">
-                    <span style="color: #888;" data-bind="text: name"></span>
-                    <span style="margin-left: 4px; font-weight: bold; color: #4af;"
-                          data-bind="text: direction + ' ' + amount"></span>
-                    <span style="color: #666; margin-left: 2px;" data-bind="text: '(z=' + z.toFixed(3) + ')'"></span>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;" data-bind="foreach: $root.klipper_screw_results_display()">
+                <div data-bind="style: { borderColor: ok ? '#336633' : isCW ? '#996600' : '#334466' }"
+                     style="border: 1px solid #555; border-radius: 6px; padding: 8px 12px; text-align: center; min-width: 100px;">
+                    <div style="font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px;"
+                         data-bind="text: name"></div>
+                    <!-- ko if: ok -->
+                    <div style="font-size: 18px; color: #5c5; margin: 4px 0;">\u2713</div>
+                    <div style="font-size: 10px; color: #5c5;">OK</div>
+                    <!-- /ko -->
+                    <!-- ko ifnot: ok -->
+                    <div style="font-size: 20px; font-weight: bold; margin: 4px 0;"
+                         data-bind="text: turns + ' turns',
+                                    style: { color: isCW ? '#f90' : '#88aaff' }"></div>
+                    <div style="font-size: 11px;"
+                         data-bind="text: isCW ? '\u2193 CW (Tighten)' : '\u2191 CCW (Loosen)',
+                                    style: { color: isCW ? '#f90' : '#88aaff' }"></div>
+                    <!-- /ko -->
+                    <div style="font-size: 9px; color: #555; margin-top: 4px;"
+                         data-bind="text: 'X=' + x + ' Y=' + y"></div>
                 </div>
-                <!-- /ko -->
             </div>
         </div>
         <!-- /ko -->

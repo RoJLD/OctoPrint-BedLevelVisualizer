@@ -1244,6 +1244,29 @@ $(function () {
 			});
 		}, self);
 
+		self.klipperTurnsToDecimal = function(amountStr) {
+			if (!amountStr) { return 0; }
+			var parts = amountStr.split(':');
+			var turns = parseInt(parts[0]) || 0;
+			var seconds = parseInt(parts[1]) || 0;
+			return (turns + seconds / 60).toFixed(2);
+		};
+
+		self.klipper_screw_results_display = ko.computed(function() {
+			return self.klipper_screw_results_array().map(function(e) {
+				return {
+					name: e.name,
+					x: e.x,
+					y: e.y,
+					direction: e.direction,
+					amount: e.amount,
+					turns: self.klipperTurnsToDecimal(e.amount),
+					isCW: e.direction === 'CW',
+					ok: e.amount === '0:00' || e.amount === '00:00'
+				};
+			});
+		}, self);
+
 		self.addParameter = function(data) {
 			data.input.push({label: ko.observable(''), parameter: ko.observable(''), value: ko.observable('')});
 		};
