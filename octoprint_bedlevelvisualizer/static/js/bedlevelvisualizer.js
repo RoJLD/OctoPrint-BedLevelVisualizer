@@ -1245,7 +1245,7 @@ $(function () {
 		}, self);
 
 		self.klipperTurnsToDecimal = function(amountStr) {
-			if (!amountStr) { return 0; }
+			if (!amountStr) { return '0.00'; }
 			var parts = amountStr.split(':');
 			var turns = parseInt(parts[0]) || 0;
 			var seconds = parseInt(parts[1]) || 0;
