@@ -113,7 +113,7 @@ $(function () {
 
 		self.onAfterBinding = function() {
 			$('div#settings_plugin_bedlevelvisualizer i[data-toggle="tooltip"],div#tab_plugin_bedlevelvisualizer i[data-toggle="tooltip"],div#wizard_plugin_bedlevelvisualizer i[data-toggle="tooltip"],div#settings_plugin_bedlevelvisualizer pre[data-toggle="tooltip"],div#settings_plugin_bedlevelvisualizer input[data-toggle="tooltip"],div#settings_plugin_bedlevelvisualizer div.input-append[data-toggle="tooltip"]').tooltip();
-			$('div#tab_plugin_bedlevelvisualizer [title]').tooltip({ placement: 'top', trigger: 'hover', container: 'body' });
+			$('div#tab_plugin_bedlevelvisualizer [title]:not([data-toggle="tooltip"])').tooltip({ placement: 'top', trigger: 'hover', container: 'body' });
 			$('#bedlevelvisualizer_tabs a').on('show.bs.tab', function(event){
 				if($(event.target).text() === 'Current Mesh Data'){
 					self.settings_active(true);
