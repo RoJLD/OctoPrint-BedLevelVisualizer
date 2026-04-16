@@ -77,6 +77,9 @@ $(function () {
 		self.screw_probe_results = ko.observable({});
 		self.screw_workflow_active = ko.observable(false);
 		self.screw_workflow_step = ko.observable(-1);
+		self.wizard_active = ko.observable(false);
+		self.wizard_step = ko.observable(0); // 0=heat, 1=mesh1, 2=adjust, 3=mesh2, 4=done
+		self.wizard_bed_temp_target = ko.observable(60);
 		self.screw_reference_mode = ko.observable('zero');
 		self.screw_reference_index = ko.observable(0);
 		self.current_bed_temp = ko.observable(null);
@@ -798,6 +801,34 @@ $(function () {
 		self.stopScrewWorkflow = function() {
 			self.screw_workflow_active(false);
 			self.screw_workflow_step(-1);
+		};
+
+		self.startWizard = function() {
+			self.wizard_step(0);
+			self.wizard_active(true);
+		};
+
+		self.wizardNext = function() {
+			var step = self.wizard_step();
+			if (step === 1 || step === 3) {
+				self.updateMesh();
+			}
+			if (step === 0) {
+				var temp = parseFloat(self.wizard_bed_temp_target());
+				if (temp > 0) {
+					OctoPrint.control.sendGcode(['M140 S' + temp, 'M190 S' + temp]);
+				}
+			}
+			self.wizard_step(step + 1);
+		};
+
+		self.wizardSkip = function() {
+			self.wizard_step(self.wizard_step() + 1);
+		};
+
+		self.cancelWizard = function() {
+			self.wizard_active(false);
+			self.wizard_step(0);
 		};
 
 		self.probeCurrentScrew = function(screw) {

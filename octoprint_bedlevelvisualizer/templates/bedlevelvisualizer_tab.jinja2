@@ -33,6 +33,93 @@
                    visible: $root.mesh_stats()"
         title="Export HTML report with mesh data, corrections and history">
     <i class="fa fa-download"></i> Export</button><button class="btn btn-mini pull-right" data-bind="click: function(){ settingsViewModel.show('#settings_plugin_bedlevelvisualizer'); }, visible: loginStateViewModel.isAdmin()"><i class="fa fa-gear"></i></button></div>
+    <!-- Leveling Wizard -->
+    <!-- ko if: $root.wizard_active() -->
+    <div class="row-fluid" style="background: #1a1a2a; border: 1px solid #334; border-radius: 6px; padding: 12px; margin-top: 8px;">
+        <div style="font-size: 13px; font-weight: bold; color: #aad; margin-bottom: 10px;">
+            <i class="fa fa-magic"></i> Leveling Wizard
+            <button class="btn btn-mini btn-danger pull-right" data-bind="click: $root.cancelWizard">
+                <i class="fa fa-times"></i> Cancel
+            </button>
+        </div>
+        <!-- Step 0: Heat bed -->
+        <!-- ko if: $root.wizard_step() === 0 -->
+        <div>
+            <p><strong>Step 1/4 &mdash; Heat bed</strong></p>
+            <p style="color: #aaa; font-size: 11px;">Heat the bed to printing temperature before leveling for accurate results.</p>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <div class="input-prepend input-append">
+                    <span class="add-on">Target</span>
+                    <input type="number" class="input-mini" min="0" max="120" step="5"
+                           data-bind="value: $root.wizard_bed_temp_target"/>
+                    <span class="add-on">&deg;C</span>
+                </div>
+                <button class="btn btn-primary btn-small"
+                        data-bind="click: $root.wizardNext, enable: $root.controlViewModel.isOperational() && !$root.processing()">
+                    <i class="fa fa-thermometer-half"></i> Heat &amp; Continue
+                </button>
+                <button class="btn btn-small" data-bind="click: $root.wizardSkip">
+                    Skip (already hot)
+                </button>
+            </div>
+        </div>
+        <!-- /ko -->
+        <!-- Step 1: First mesh -->
+        <!-- ko if: $root.wizard_step() === 1 -->
+        <div>
+            <p><strong>Step 2/4 &mdash; Run bed leveling (G29)</strong></p>
+            <p style="color: #aaa; font-size: 11px;">This will run your configured bed leveling command and capture the mesh.</p>
+            <button class="btn btn-primary btn-small"
+                    data-bind="click: $root.wizardNext, enable: $root.controlViewModel.isOperational() && !$root.processing()">
+                <i class="fa fa-play"></i> Start Mesh Leveling
+            </button>
+        </div>
+        <!-- /ko -->
+        <!-- Step 2: Adjust screws -->
+        <!-- ko if: $root.wizard_step() === 2 -->
+        <div>
+            <p><strong>Step 3/4 &mdash; Adjust screws</strong></p>
+            <p style="color: #aaa; font-size: 11px;">Use the Screw Adjustment Guide below to level each corner. When done, click Continue.</p>
+            <button class="btn btn-primary btn-small" data-bind="click: $root.wizardNext">
+                <i class="fa fa-check"></i> Screws adjusted &mdash; Continue
+            </button>
+        </div>
+        <!-- /ko -->
+        <!-- Step 3: Verification mesh -->
+        <!-- ko if: $root.wizard_step() === 3 -->
+        <div>
+            <p><strong>Step 4/4 &mdash; Verify result</strong></p>
+            <p style="color: #aaa; font-size: 11px;">Run a second mesh to confirm the bed is now leveled.</p>
+            <button class="btn btn-primary btn-small"
+                    data-bind="click: $root.wizardNext, enable: $root.controlViewModel.isOperational() && !$root.processing()">
+                <i class="fa fa-refresh"></i> Run Verification Mesh
+            </button>
+        </div>
+        <!-- /ko -->
+        <!-- Step 4: Done -->
+        <!-- ko if: $root.wizard_step() >= 4 -->
+        <div>
+            <p><strong style="color: #5c5;"><i class="fa fa-check-circle"></i> Leveling complete!</strong></p>
+            <!-- ko if: $root.mesh_stats() -->
+            <p style="color: #aaa; font-size: 11px;">
+                Final P-P: <strong data-bind="text: $root.mesh_stats().pp + 'mm'"></strong>
+                &nbsp; Grade: <strong data-bind="text: $root.mesh_stats().grade"></strong>
+            </p>
+            <!-- /ko -->
+            <button class="btn btn-success btn-small" data-bind="click: $root.cancelWizard">
+                <i class="fa fa-flag-checkered"></i> Finish
+            </button>
+        </div>
+        <!-- /ko -->
+    </div>
+    <!-- /ko -->
+    <!-- ko ifnot: $root.wizard_active() -->
+    <div style="text-align: right; margin-bottom: 4px;" data-bind="visible: $root.controlViewModel.isOperational() && !$root.processing()">
+        <button class="btn btn-mini btn-default" data-bind="click: $root.startWizard" title="Step-by-step leveling guide">
+            <i class="fa fa-magic"></i> Leveling Wizard
+        </button>
+    </div>
+    <!-- /ko -->
     <!-- Mesh Statistics -->
     <!-- ko if: $root.mesh_stats() -->
     <div class="row-fluid" style="padding-top: 8px; padding-bottom: 4px;">
