@@ -35,19 +35,19 @@
             <div style="font-weight: bold; color: #aaa; margin-right: 4px;">
                 <i class="fa fa-bar-chart"></i> Flatness
             </div>
-            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 3px 8px;">
+            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 3px 8px;" title="Peak-to-Peak: difference between highest and lowest mesh point. Lower = flatter bed.">
                 <span style="color: #888;">P-P</span>
                 <span style="font-weight: bold; margin-left: 4px;"
                       data-bind="text: $root.mesh_stats().pp + 'mm',
                                  style: { color: parseFloat($root.mesh_stats().pp) < 0.05 ? '#5c5' :
                                                 parseFloat($root.mesh_stats().pp) < 0.2  ? '#f90' : '#e44' }"></span>
             </div>
-            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 3px 8px;">
+            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 3px 8px;" title="Root Mean Square: average deviation across all mesh points.">
                 <span style="color: #888;">RMS</span>
                 <span style="font-weight: bold; margin-left: 4px;"
                       data-bind="text: $root.mesh_stats().rms + 'mm'"></span>
             </div>
-            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 3px 8px;">
+            <div style="background: #1a1a1a; border: 1px solid #333; border-radius: 4px; padding: 3px 8px;" title="Distribution: % of probe points within ok (±0.05mm) / warning (±0.2mm) / critical thresholds">
                 <span style="color: #5c5; font-weight: bold;"
                       data-bind="text: $root.mesh_stats().pctOk + '%'"></span>
                 <span style="color: #f90; margin-left: 4px; font-weight: bold;"
@@ -56,6 +56,7 @@
                       data-bind="text: $root.mesh_stats().pctCrit + '%'"></span>
             </div>
             <div style="border: 1px solid #555; border-radius: 4px; padding: 3px 10px; font-size: 13px; font-weight: bold;"
+                 title="Grade: A=excellent (&lt;0.05mm P-P), B=good (&lt;0.1mm), C=fair (&lt;0.2mm), D=poor (≥0.2mm)"
                  data-bind="text: $root.mesh_stats().grade,
                             style: { color: $root.mesh_stats().grade === 'A' ? '#5c5' :
                                             $root.mesh_stats().grade === 'B' ? '#aacc00' :
