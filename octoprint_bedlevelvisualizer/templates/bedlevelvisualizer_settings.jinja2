@@ -451,6 +451,30 @@
 									</small>
 								</div>
 							</div>
+						</div>
+						<!-- Mesh degradation alert settings -->
+						<div class="row-fluid" style="padding-top: 10px;">
+							<hr/>
+							<div class="control-group span12">
+								<label style="font-weight: bold;">Mesh Degradation Alert</label>
+								<div>
+									<input class="input-checkbox" type="checkbox"
+									       data-bind="checked: settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_degradation_alert"
+									       style="display: inline-block; margin-bottom: 5px;"/>
+									Alert when flatness degrades between meshes
+								</div>
+								<div style="margin-top: 4px;">
+									<label>Threshold (%)</label>
+									<div class="input-append" style="display: inline-block; margin-left: 8px;">
+										<input type="number" class="input-mini" min="5" max="200" step="5"
+										       data-bind="value: settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_degradation_threshold,
+										                  enable: settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_degradation_alert()"/>
+										<span class="add-on">%</span>
+									</div>
+									<small class="help-block">Show warning if P-P increases by more than this percentage.</small>
+								</div>
+							</div>
+						</div>
 			</div>
 
 			<div id="bedlevelvisualizer_custom_commands" class="tab-pane">

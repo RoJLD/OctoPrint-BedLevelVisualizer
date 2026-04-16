@@ -304,6 +304,25 @@ $(function () {
 					};
 					var hist = self.mesh_history_list().slice();
 					hist.unshift(histEntry);
+					if (hist.length >= 2 &&
+					    self.settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_degradation_alert &&
+					    self.settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_degradation_alert()) {
+					    var currentPP  = parseFloat(hist[0].pp);
+					    var previousPP = parseFloat(hist[1].pp);
+					    var degradeThreshold = parseFloat(self.settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_degradation_threshold()) || 20;
+					    if (previousPP > 0) {
+					        var increasePercent = ((currentPP - previousPP) / previousPP) * 100;
+					        if (increasePercent > degradeThreshold) {
+					            new PNotify({
+					                title: 'Bed Flatness Alert',
+					                text: 'Flatness degraded by ' + Math.round(increasePercent) + '% since last mesh<br>' +
+					                      'P-P: ' + previousPP.toFixed(3) + 'mm → ' + currentPP.toFixed(3) + 'mm',
+					                type: 'warning',
+					                hide: false
+					            });
+					        }
+					    }
+					}
 					if (hist.length > 10) { hist = hist.slice(0, 10); }
 					self.mesh_history_list(hist);
 					self.settingsViewModel.settings.plugins.bedlevelvisualizer.mesh_history(hist);
