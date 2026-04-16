@@ -27,7 +27,12 @@
     <div class="row-fluid" id="bedlevelvisualizerbutton" style="text-align: center;"><button class="btn" data-bind="click: !processing() ? updateMesh : cancelMeshUpdate, enable: controlViewModel.isOperational() && !controlViewModel.isPrinting() && loginStateViewModel.isUser() && settingsViewModel.settings.plugins.bedlevelvisualizer.command() !== '', css: !processing() ? 'btn-primary' : 'btn-danger',attr: {'title': !processing() ? 'Run Mesh Update Process' : 'Cancel Mesh Update Process'}"><i class="icon-2 icon-info-sign" data-bind="attr: {'title': mesh_status}" data-toggle="tooltip"></i> <span data-bind="text: !processing() ? 'Update Mesh Now' : 'Cancel'"></span></button><button class="btn btn-mini" style="margin-left: 6px;"
         data-bind="click: function(){ OctoPrint.control.sendGcode(['M420 V']); },
                    enable: $root.controlViewModel.isOperational() && !$root.processing()"
-        title="Request Marlin M420 V — re-sends stored bed mesh to terminal">M420 V</button><button class="btn btn-mini pull-right" data-bind="click: function(){ settingsViewModel.show('#settings_plugin_bedlevelvisualizer'); }, visible: loginStateViewModel.isAdmin()"><i class="fa fa-gear"></i></button></div>
+        title="Request Marlin M420 V — re-sends stored bed mesh to terminal">M420 V</button><button class="btn btn-mini" style="margin-left: 6px;"
+        data-bind="click: $root.exportReport,
+                   enable: $root.mesh_stats() && !$root.processing(),
+                   visible: $root.mesh_stats()"
+        title="Export HTML report with mesh data, corrections and history">
+    <i class="fa fa-download"></i> Export</button><button class="btn btn-mini pull-right" data-bind="click: function(){ settingsViewModel.show('#settings_plugin_bedlevelvisualizer'); }, visible: loginStateViewModel.isAdmin()"><i class="fa fa-gear"></i></button></div>
     <!-- Mesh Statistics -->
     <!-- ko if: $root.mesh_stats() -->
     <div class="row-fluid" style="padding-top: 8px; padding-bottom: 4px;">

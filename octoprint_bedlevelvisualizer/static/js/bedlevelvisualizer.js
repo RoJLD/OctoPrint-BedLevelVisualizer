@@ -1316,6 +1316,99 @@ $(function () {
 			}
 		});
 
+		self.exportReport = function() {
+			var stats = self.mesh_stats();
+			if (!stats) {
+				new PNotify({ title: 'Export', text: 'No mesh data to export.', type: 'warning', hide: true });
+				return;
+			}
+			Plotly.toImage('bedlevelvisualizergraph', { format: 'png', width: 700, height: 450 }).then(function(imgUrl) {
+				var bed = self.bed_info();
+				var corrections = self.screw_corrections();
+				var patterns = self.mesh_patterns() || [];
+				var hist = self.mesh_history_list();
+
+				function gradeClass(g) { return g === 'A' || g === 'B' ? 'ok' : g === 'C' ? 'warn' : 'bad'; }
+
+				var html = '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">' +
+					'<title>Bed Level Report</title><style>' +
+					'body{font-family:monospace;background:#111;color:#ddd;padding:24px;max-width:900px;margin:0 auto}' +
+					'h1{color:#fff;border-bottom:2px solid #444;padding-bottom:8px}' +
+					'h2{color:#aaa;margin-top:24px}' +
+					'table{border-collapse:collapse;width:100%;margin-top:8px}' +
+					'td,th{border:1px solid #444;padding:6px 12px;text-align:left}' +
+					'th{background:#222;color:#aaa}' +
+					'.ok{color:#5c5}.warn{color:#f90}.bad{color:#e44}' +
+					'img{max-width:100%;border:1px solid #444;border-radius:4px;margin-top:8px}' +
+					'.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;margin:2px}' +
+					'.badge-ok{background:#1a3a1a;border:1px solid #3a7a3a}' +
+					'.badge-warn{background:#3a2a00;border:1px solid #997700}' +
+					'.badge-bad{background:#3a0000;border:1px solid #993333}' +
+					'@media print{body{background:#fff;color:#000}td,th{border-color:#ccc}h1,h2{color:#000}}' +
+					'</style></head><body>';
+
+				var bedStr = bed && bed.x_max ? Math.round(bed.x_max) + ' × ' + Math.round(bed.y_max) + ' mm' : 'Unknown';
+				html += '<h1>Bed Level Report</h1>';
+				html += '<p>Generated: <strong>' + new Date().toLocaleString() + '</strong> &nbsp;|&nbsp; Bed: <strong>' + bedStr + '</strong></p>';
+
+				html += '<h2>Flatness</h2><table><tr><th>P-P</th><th>RMS</th><th>Grade</th><th>Distribution</th></tr><tr>';
+				html += '<td class="' + (parseFloat(stats.pp) < 0.1 ? 'ok' : parseFloat(stats.pp) < 0.2 ? 'warn' : 'bad') + '">' + stats.pp + ' mm</td>';
+				html += '<td>' + stats.rms + ' mm</td>';
+				html += '<td class="' + gradeClass(stats.grade) + '">' + stats.grade + '</td>';
+				html += '<td>' + stats.pctOk + '% ok / ' + stats.pctWarn + '% warn / ' + stats.pctCrit + '% critical</td>';
+				html += '</tr></table>';
+
+				if (patterns.length) {
+					html += '<h2>Patterns</h2><ul>' + patterns.map(function(p) { return '<li>' + p + '</li>'; }).join('') + '</ul>';
+				}
+
+				html += '<h2>Mesh Visualization</h2><img src="' + imgUrl + '" alt="Mesh 3D view"/>';
+
+				if (corrections.length) {
+					html += '<h2>Screw Corrections</h2><table><tr><th>Screw</th><th>Position</th><th>Z</th><th>Delta</th><th>Turns</th><th>Action</th></tr>';
+					corrections.forEach(function(sc) {
+						var cls = sc.display_state === 'ok' || sc.display_state === 'ref' ? 'ok' : sc.tier === 'critical' ? 'bad' : 'warn';
+						var action = sc.display_state === 'ref' ? 'REF' :
+									 sc.display_state === 'ok'  ? '✓ OK' :
+									 sc.display_state === 'adjust' ? (sc.tighten ? '↓ Tighten' : '↑ Loosen') + ' ' + sc.turns + ' turns' : sc.display_state;
+						html += '<tr><td class="' + cls + '">' + sc.label + '</td>' +
+								'<td>X=' + sc.x + ' Y=' + sc.y + '</td>' +
+								'<td>' + sc.z + ' mm</td>' +
+								'<td>' + sc.delta + ' mm</td>' +
+								'<td>' + sc.turns + '</td>' +
+								'<td class="' + cls + '">' + action + '</td></tr>';
+					});
+					html += '</table>';
+				}
+
+				if (hist.length) {
+					html += '<h2>Mesh History (last ' + hist.length + ')</h2>';
+					html += '<table><tr><th>Date</th><th>P-P</th><th>Grade</th><th>Bed Temp</th></tr>';
+					hist.forEach(function(e) {
+						html += '<tr><td>' + e.timestamp + '</td>' +
+								'<td class="' + (parseFloat(e.pp) < 0.1 ? 'ok' : parseFloat(e.pp) < 0.2 ? 'warn' : 'bad') + '">' + e.pp + ' mm</td>' +
+								'<td class="' + gradeClass(e.grade || 'D') + '">' + (e.grade || '?') + '</td>' +
+								'<td>' + (e.bed_temp !== null && e.bed_temp !== undefined ? e.bed_temp + ' °C' : 'N/A') + '</td></tr>';
+					});
+					html += '</table>';
+				}
+
+				html += '<hr style="margin-top:32px;border-color:#444"><p style="color:#666;font-size:10px">OctoPrint BedLevelVisualizer — RoJLD fork</p></body></html>';
+
+				var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+				var url = URL.createObjectURL(blob);
+				var a = document.createElement('a');
+				a.href = url;
+				a.download = 'bed-level-report-' + new Date().toISOString().slice(0, 10) + '.html';
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+			}).catch(function() {
+				new PNotify({ title: 'Export', text: 'Could not capture graph image. Report without image.', type: 'warning' });
+			});
+		};
+
 		self.runCustomCommand = function(data) {
 			var gcode_cmds = data.command().split("\n");
 			var parameters = {};
