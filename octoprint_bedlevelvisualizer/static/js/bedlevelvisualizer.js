@@ -980,15 +980,23 @@ $(function () {
 				};
 			});
 
-			// If G30 probe results exist, force screw-relative mode:
-			// G30 returns absolute Z heights (~-9.7mm), not deviations.
-			// Comparing to Z=0 or a plane makes no sense — only relative differences matter.
+			// If G30 probe results exist, normalize their absolute Z values to deviations.
+			// G30 returns absolute Z heights (~-9.7mm with Z-offset), while mesh values
+			// are deviations from z=0. Subtracting the mean of all probed Z values converts
+			// them to ±deviations around the average plane, so the user's configured
+			// reference mode (z=0, screw, plane) applies correctly without being overridden.
 			var anyProbed = interpolated.some(function(e) { return e.isProbed; });
-			if (anyProbed && mode !== 'screw') {
-				mode = 'screw';
-				// Use first non-out-of-bounds probed screw as reference
-				for (var pi = 0; pi < interpolated.length; pi++) {
-					if (!interpolated[pi].outOfBounds) { refIdx = pi; break; }
+			if (anyProbed) {
+				var probedValid = interpolated.filter(function(e) { return e.isProbed && !e.outOfBounds && e.z !== null; });
+				if (probedValid.length > 0) {
+					var probedMean = probedValid.reduce(function(sum, e) { return sum + e.z; }, 0) / probedValid.length;
+					interpolated = interpolated.map(function(e) {
+						if (e.isProbed && !e.outOfBounds && e.z !== null) {
+							return { label: e.label, x: e.x, y: e.y, z: e.z - probedMean,
+							         outOfBounds: e.outOfBounds, isProbed: e.isProbed, probedAt: e.probedAt };
+						}
+						return e;
+					});
 				}
 			}
 
