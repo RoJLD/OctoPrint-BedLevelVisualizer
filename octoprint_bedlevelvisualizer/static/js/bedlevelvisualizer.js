@@ -1276,7 +1276,8 @@ $(function () {
 			Plotly.react(divId, [ppTrace], ppLayout, { displaylogo: false, responsive: true });
 		};
 
-		self.drawDiffChart = function() {
+		self.drawDiffChart = function(targetId) {
+			var divId = targetId || 'bedlevelvisualizer_diff_chart';
 			var diffData = self.mesh_diff_data();
 			if (!diffData) { return; }
 			var diffTrace = {
@@ -1301,8 +1302,15 @@ $(function () {
 					zaxis: { color: foreground_color }
 				}
 			};
-			Plotly.react('bedlevelvisualizer_diff_chart', [diffTrace], diffLayout, { displaylogo: false, responsive: true });
+			Plotly.react(divId, [diffTrace], diffLayout, { displaylogo: false, responsive: true });
 		};
+
+		self.mesh_diff_data.subscribe(function(newVal) {
+			if (newVal) {
+				self.drawDiffChart('bedlevelvisualizer_diff_chart_tab');
+				self.drawDiffChart('bedlevelvisualizer_diff_chart');
+			}
+		});
 
 		self.runCustomCommand = function(data) {
 			var gcode_cmds = data.command().split("\n");

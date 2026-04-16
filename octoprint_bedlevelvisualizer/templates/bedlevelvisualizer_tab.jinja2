@@ -268,6 +268,34 @@
         <!-- /ko -->
     </div>
     <!-- /ko -->
+    <!-- ko if: $root.mesh_history_list().length >= 2 -->
+    <div class="row-fluid" style="padding-top: 12px;">
+        <hr style="margin: 8px 0;"/>
+        <div style="font-size: 12px; font-weight: bold; color: #aaa; margin-bottom: 6px;">
+            <i class="fa fa-code-fork"></i> Mesh Diff
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; font-size: 11px; flex-wrap: wrap; margin-bottom: 4px;">
+            <span style="color: #888;">Compare</span>
+            <select class="input-mini" data-bind="value: $root.mesh_diff_index_a">
+                <!-- ko foreach: $root.mesh_history_list() -->
+                <option data-bind="value: $index(), text: timestamp"></option>
+                <!-- /ko -->
+            </select>
+            <span style="color: #888;">vs</span>
+            <select class="input-mini" data-bind="value: $root.mesh_diff_index_b">
+                <!-- ko foreach: $root.mesh_history_list() -->
+                <option data-bind="value: $index(), text: timestamp"></option>
+                <!-- /ko -->
+            </select>
+        </div>
+        <!-- ko if: $root.mesh_diff_data() -->
+        <div id="bedlevelvisualizer_diff_chart_tab" style="height: 200px;"></div>
+        <!-- /ko -->
+        <!-- ko ifnot: $root.mesh_diff_data() -->
+        <p class="muted" style="font-size: 11px;">Select two different entries to compare.</p>
+        <!-- /ko -->
+    </div>
+    <!-- /ko -->
 </div>
 
 
