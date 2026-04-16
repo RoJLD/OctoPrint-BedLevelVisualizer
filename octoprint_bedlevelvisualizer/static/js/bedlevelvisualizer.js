@@ -1322,6 +1322,9 @@ $(function () {
 				new PNotify({ title: 'Export', text: 'No mesh data to export.', type: 'warning', hide: true });
 				return;
 			}
+			function esc(s) {
+				return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+			}
 			Plotly.toImage('bedlevelvisualizergraph', { format: 'png', width: 700, height: 450 }).then(function(imgUrl) {
 				var bed = self.bed_info();
 				var corrections = self.screw_corrections();
@@ -1359,7 +1362,7 @@ $(function () {
 				html += '</tr></table>';
 
 				if (patterns.length) {
-					html += '<h2>Patterns</h2><ul>' + patterns.map(function(p) { return '<li>' + p + '</li>'; }).join('') + '</ul>';
+					html += '<h2>Patterns</h2><ul>' + patterns.map(function(p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
 				}
 
 				html += '<h2>Mesh Visualization</h2><img src="' + imgUrl + '" alt="Mesh 3D view"/>';
@@ -1371,12 +1374,12 @@ $(function () {
 						var action = sc.display_state === 'ref' ? 'REF' :
 									 sc.display_state === 'ok'  ? '✓ OK' :
 									 sc.display_state === 'adjust' ? (sc.tighten ? '↓ Tighten' : '↑ Loosen') + ' ' + sc.turns + ' turns' : sc.display_state;
-						html += '<tr><td class="' + cls + '">' + sc.label + '</td>' +
-								'<td>X=' + sc.x + ' Y=' + sc.y + '</td>' +
-								'<td>' + sc.z + ' mm</td>' +
-								'<td>' + sc.delta + ' mm</td>' +
-								'<td>' + sc.turns + '</td>' +
-								'<td class="' + cls + '">' + action + '</td></tr>';
+						html += '<tr><td class="' + cls + '">' + esc(sc.label) + '</td>' +
+								'<td>X=' + esc(sc.x) + ' Y=' + esc(sc.y) + '</td>' +
+								'<td>' + esc(sc.z) + ' mm</td>' +
+								'<td>' + esc(sc.delta) + ' mm</td>' +
+								'<td>' + esc(sc.turns) + '</td>' +
+								'<td class="' + cls + '">' + esc(action) + '</td></tr>';
 					});
 					html += '</table>';
 				}
