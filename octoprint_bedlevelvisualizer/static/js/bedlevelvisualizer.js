@@ -223,6 +223,9 @@ $(function () {
 						}
 					}
 					self.drawMesh(mesh_data.mesh,true,x_data,y_data,mesh_data.bed.z_max);
+					if (self.mesh_history_list().length >= 2) {
+						self.drawPPChart('bedlevelvisualizer_pp_chart_tab');
+					}
 					self.mesh_data(mesh_data.mesh);
 					self.mesh_data_x(x_data);
 					self.mesh_data_y(y_data);
@@ -1218,7 +1221,8 @@ $(function () {
 			self.drawMesh(entry.mesh, false, entry.mesh_x, entry.mesh_y, entry.z_height);
 		};
 
-		self.drawPPChart = function() {
+		self.drawPPChart = function(targetId) {
+			var divId = targetId || 'bedlevelvisualizer_pp_chart';
 			var hist = self.mesh_history_list();
 			if (!hist.length) { return; }
 			var timestamps = hist.map(function(e) { return e.timestamp; }).reverse();
@@ -1249,7 +1253,7 @@ $(function () {
 					{ type: 'line', x0: 0, x1: 1, xref: 'paper', y0: 0.2,  y1: 0.2,  line: { color: '#ff9900', dash: 'dot', width: 1 } }
 				]
 			};
-			Plotly.react('bedlevelvisualizer_pp_chart', [ppTrace], ppLayout, { displaylogo: false, responsive: true });
+			Plotly.react(divId, [ppTrace], ppLayout, { displaylogo: false, responsive: true });
 		};
 
 		self.drawDiffChart = function() {

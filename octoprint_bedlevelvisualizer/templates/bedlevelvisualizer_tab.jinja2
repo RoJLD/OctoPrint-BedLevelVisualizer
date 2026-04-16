@@ -66,6 +66,14 @@
         </div>
     </div>
     <!-- /ko -->
+    <!-- ko if: $root.mesh_history_list().length >= 2 -->
+    <div class="row-fluid" style="padding-top: 4px; padding-bottom: 4px;">
+        <div style="font-weight: bold; color: #aaa; font-size: 11px; margin-bottom: 2px;">
+            <i class="fa fa-line-chart"></i> P-P History
+        </div>
+        <div id="bedlevelvisualizer_pp_chart_tab" style="height: 120px;"></div>
+    </div>
+    <!-- /ko -->
     <!-- Pattern Detection & Thermal Drift -->
     <!-- ko if: $root.mesh_patterns() -->
     <div class="row-fluid" style="padding-top: 4px; padding-bottom: 4px;">
