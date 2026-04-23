@@ -25,6 +25,7 @@
             <div class="row-fluid" style="margin-top: 15px;">
                 <button class="btn btn-primary" data-bind="click: refreshHealthScore"><i class="fa fa-refresh"></i> Refresh</button>
                 <button class="btn btn-warning" data-bind="click: openCleanNozzleWizard" style="margin-left: 10px;"><i class="fa fa-tint"></i> Clean Nozzle</button>
+                <button class="btn btn-info" data-bind="click: openZOffsetWizard" style="margin-left: 10px;"><i class="fa fa-arrows-v"></i> Z-Offset</button>
                 <span style="margin-left: 15px; color: #999;">Recommended action: <strong data-bind="text: recommendedAction"></strong></span>
             </div>
         </div>
@@ -638,6 +639,84 @@
         <button class="btn btn-primary" data-bind="click: cleanNozzleProceed, visible: cleanNozzleStep() === 'heating'">Temperature Reached</button>
         <button class="btn btn-success" data-bind="click: cleanNozzleDone, visible: cleanNozzleStep() === 'confirm'">Done - Nozzle Clean</button>
         <button class="btn" data-bind="click: cleanNozzleClose, visible: cleanNozzleStep() === 'done'">Close</button>
+    </div>
+</div>
+
+<!-- Z-Offset Paper Test Wizard Modal (V1.2b.2) -->
+<div id="bcs_zoffset_modal" class="modal hide fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false" style="width: 600px; margin-left: -300px;">
+    <div class="modal-header">
+        <h3><i class="fa fa-arrows-v"></i> Z-Offset Paper Test Wizard</h3>
+    </div>
+    <div class="modal-body">
+        <!-- Intro -->
+        <div data-bind="visible: zOffsetStep() === 'intro'">
+            <p>This wizard calibrates your Z-offset using the paper test method.</p>
+            <div class="alert alert-warning">
+                <strong>Important:</strong> Clean the nozzle BEFORE starting. A dirty nozzle will falsify the measurement by 0.1-0.2mm.
+            </div>
+            <p><strong>Prepare:</strong> A sheet of standard paper (80gsm) or a business card.</p>
+            <p><strong>Duration:</strong> 2-3 minutes.</p>
+        </div>
+
+        <!-- Homing -->
+        <div data-bind="visible: zOffsetStep() === 'homing'">
+            <p><strong>Step 1/4:</strong> Homing all axes and moving to bed center...</p>
+            <p><i class="fa fa-spinner fa-spin"></i> Printer is homing. Wait for completion.</p>
+            <p>Current target Z: <strong data-bind="text: zOffsetCurrentZ"></strong> mm</p>
+        </div>
+
+        <!-- Descending / Paper test -->
+        <div data-bind="visible: zOffsetStep() === 'descending'">
+            <p><strong>Step 2/4:</strong> Paper test — slide the paper under the nozzle.</p>
+            <p>Current Z: <strong data-bind="text: zOffsetCurrentZ"></strong> mm</p>
+            <div class="alert alert-info">
+                Slide the paper. Select the feeling:
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-large btn-success" data-bind="click: function() { zOffsetTooLoose(); }">
+                    <i class="fa fa-arrow-down"></i> Too loose (lower nozzle)
+                </button>
+                <button class="btn btn-large btn-primary" data-bind="click: function() { zOffsetJustRight(); }">
+                    <i class="fa fa-check"></i> Just right (slight resistance)
+                </button>
+                <button class="btn btn-large btn-warning" data-bind="click: function() { zOffsetTooTight(); }">
+                    <i class="fa fa-arrow-up"></i> Too tight (raise nozzle)
+                </button>
+            </div>
+            <p class="help-block" style="margin-top: 15px;">Step size: <strong data-bind="text: zOffsetStepSize"></strong> mm (auto-refines)</p>
+        </div>
+
+        <!-- Confirm -->
+        <div data-bind="visible: zOffsetStep() === 'confirm'">
+            <p><strong>Step 3/4:</strong> Confirm and save.</p>
+            <div class="alert alert-success">
+                Z-offset measured: <strong data-bind="text: zOffsetMeasured"></strong> mm<br>
+                This will be saved via <code>M851 Z<span data-bind="text: zOffsetMeasured"></span></code> + <code>M500</code>.
+            </div>
+            <p>After saving, a baseline probe measurement (G30 x3) will be stored for drift detection.</p>
+        </div>
+
+        <!-- Saving -->
+        <div data-bind="visible: zOffsetStep() === 'saving'">
+            <p><strong>Step 4/4:</strong> Saving to EEPROM + baseline probe...</p>
+            <p><i class="fa fa-spinner fa-spin"></i> Please wait.</p>
+        </div>
+
+        <!-- Done -->
+        <div data-bind="visible: zOffsetStep() === 'done'">
+            <div class="alert alert-success">
+                <i class="fa fa-check"></i> Z-Offset calibrated and saved.<br>
+                Value: <strong data-bind="text: zOffsetMeasured"></strong> mm<br>
+                Baseline stored for future drift detection.
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn" data-bind="click: zOffsetCancel, visible: zOffsetStep() !== 'done' && zOffsetStep() !== 'saving'">Cancel</button>
+        <button class="btn btn-primary" data-bind="click: zOffsetStart, visible: zOffsetStep() === 'intro'">Start</button>
+        <button class="btn btn-primary" data-bind="click: zOffsetProceedToDescend, visible: zOffsetStep() === 'homing'">Homing Done - Start Descend</button>
+        <button class="btn btn-success" data-bind="click: zOffsetSave, visible: zOffsetStep() === 'confirm'">Save</button>
+        <button class="btn" data-bind="click: zOffsetClose, visible: zOffsetStep() === 'done'">Close</button>
     </div>
 </div>
 

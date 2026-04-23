@@ -157,6 +157,106 @@ $(function () {
 			$("#bcs_clean_nozzle_modal").modal("hide");
 		};
 
+		// === ZOffset paper test wizard (V1.2b.2) ===
+		// State machine: intro | homing | descending | confirm | saving | done
+		self.zOffsetStep = ko.observable("intro");
+		self.zOffsetCurrentZ = ko.observable(1.0);
+		self.zOffsetStepSize = ko.observable(0.2); // Auto-refines from 0.2 -> 0.1 -> 0.05 -> 0.02
+		self.zOffsetMeasured = ko.observable("--");
+
+		self._zoffset_min_step = 0.02;
+
+		self.openZOffsetWizard = function() {
+			self.zOffsetStep("intro");
+			self.zOffsetCurrentZ(1.0);
+			self.zOffsetStepSize(0.2);
+			self.zOffsetMeasured("--");
+			$("#bcs_zoffset_modal").modal("show");
+		};
+
+		self.zOffsetStart = function() {
+			self.zOffsetStep("homing");
+			OctoPrint.simpleApiCommand("bedcalibrationsuite", "zOffsetHome")
+				.fail(function() {
+					new PNotify({title: "Z-Offset", text: "Homing failed", type: "error"});
+					self.zOffsetStep("intro");
+				});
+		};
+
+		self.zOffsetProceedToDescend = function() {
+			self.zOffsetStep("descending");
+			self.zOffsetCurrentZ(1.0);
+			self.zOffsetStepSize(0.2);
+			self._zoffsetDescendTo(1.0);
+		};
+
+		self._zoffsetDescendTo = function(target_z) {
+			self.zOffsetCurrentZ(target_z.toFixed(2));
+			OctoPrint.simpleApiCommand("bedcalibrationsuite", "zOffsetDescend", {target_z: target_z})
+				.fail(function() {
+					new PNotify({title: "Z-Offset", text: "Descend command failed", type: "error"});
+				});
+		};
+
+		self.zOffsetTooLoose = function() {
+			// Nozzle is too high - go DOWN by current step size
+			var currentZ = parseFloat(self.zOffsetCurrentZ());
+			var step = self.zOffsetStepSize();
+			var newZ = Math.max(-3.0, currentZ - step);
+			self._zoffsetDescendTo(newZ);
+		};
+
+		self.zOffsetTooTight = function() {
+			// Nozzle is too low - go UP + refine step (we overshot)
+			var currentZ = parseFloat(self.zOffsetCurrentZ());
+			var step = self.zOffsetStepSize();
+			var newZ = currentZ + step;
+			// Refine step for next approach
+			var nextStep = Math.max(self._zoffset_min_step, step / 2);
+			self.zOffsetStepSize(nextStep);
+			self._zoffsetDescendTo(newZ);
+		};
+
+		self.zOffsetJustRight = function() {
+			// The current Z is the correct offset
+			var currentZ = parseFloat(self.zOffsetCurrentZ());
+			// Z-offset to save is the NEGATIVE of current Z (we're below the initial home zero)
+			// But for M851, the convention is: Z-offset represents probe-to-nozzle distance
+			// In paper test: current Z (relative to post-home position) IS the z-offset to set
+			self.zOffsetMeasured(currentZ.toFixed(3));
+			self.zOffsetStep("confirm");
+		};
+
+		self.zOffsetSave = function() {
+			self.zOffsetStep("saving");
+			var offset = parseFloat(self.zOffsetMeasured());
+			OctoPrint.simpleApiCommand("bedcalibrationsuite", "zOffsetSave", {offset_mm: offset, method: "paper_test"})
+				.done(function(data) {
+					// Also trigger baseline probe
+					OctoPrint.simpleApiCommand("bedcalibrationsuite", "zOffsetBaseline")
+						.always(function() {
+							self.zOffsetStep("done");
+							self.refreshHealthScore();
+						});
+				})
+				.fail(function() {
+					new PNotify({title: "Z-Offset", text: "Save failed", type: "error"});
+					self.zOffsetStep("confirm");
+				});
+		};
+
+		self.zOffsetCancel = function() {
+			// Raise Z to safe height before cancel
+			OctoPrint.control.sendGcode(["G1 Z10 F600"]);
+			self.zOffsetStep("intro");
+			$("#bcs_zoffset_modal").modal("hide");
+		};
+
+		self.zOffsetClose = function() {
+			self.zOffsetStep("intro");
+			$("#bcs_zoffset_modal").modal("hide");
+		};
+
 		self._scoreLabelClass = function(score) {
 			if (score >= 90) return "label label-success";
 			if (score >= 70) return "label label-info";

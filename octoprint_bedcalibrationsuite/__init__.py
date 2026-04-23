@@ -199,6 +199,10 @@ try:
                 startZOffset=[],
                 startMeshOnly=[],
                 cleanNozzle=["material"],
+                zOffsetHome=[],
+                zOffsetDescend=["target_z"],
+                zOffsetSave=["offset_mm", "method"],
+                zOffsetBaseline=[],
             )
 
         def on_api_command(self, command, data):
@@ -214,6 +218,36 @@ try:
                 gcodes = self._zoffset.clean_nozzle_gcode(material, clean_pos=pos)
                 self._printer.commands(gcodes)
                 return flask.jsonify({"status": "cleaning", "material": material})
+            if command == "zOffsetHome":
+                gcodes = self._zoffset.center_gcode()
+                # center_gcode returns ["G28", "G1 X<cx> Y<cy> Z10 F3000"]
+                self._printer.commands(gcodes)
+                return flask.jsonify({"status": "homing"})
+            if command == "zOffsetDescend":
+                try:
+                    target_z = float(data.get("target_z", 0.2))
+                except (TypeError, ValueError):
+                    return flask.jsonify({"status": "error", "message": "invalid target_z"}), 400
+                gcodes = self._zoffset.paper_test_descend_gcode(target_z=target_z)
+                self._printer.commands(gcodes)
+                return flask.jsonify({"status": "descending", "target_z": target_z})
+            if command == "zOffsetSave":
+                try:
+                    offset_mm = float(data.get("offset_mm"))
+                except (TypeError, ValueError):
+                    return flask.jsonify({"status": "error", "message": "invalid offset_mm"}), 400
+                method = data.get("method", "paper_test")
+                gcodes = self._zoffset.save_zoffset_gcode(offset_mm)
+                self._printer.commands(gcodes)
+                # Persist in bed_health
+                if self._health:
+                    self._health.update_zoffset(method=method, value_mm=offset_mm)
+                    self._health.save()
+                return flask.jsonify({"status": "saved", "offset_mm": offset_mm, "method": method})
+            if command == "zOffsetBaseline":
+                gcodes = self._zoffset.probe_baseline_gcode()
+                self._printer.commands(gcodes)
+                return flask.jsonify({"status": "probing_baseline"})
             return flask.jsonify({"status": "ok"})
 
         def on_event(self, event, payload):
