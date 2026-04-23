@@ -23,7 +23,8 @@
                 </div>
             </div>
             <div class="row-fluid" style="margin-top: 15px;">
-                <button class="btn btn-primary" data-bind="click: refreshHealthScore"><i class="fa fa-refresh"></i> Refresh</button>
+                <button class="btn btn-large btn-inverse" data-bind="click: openFullCalibrationWizard"><i class="fa fa-magic"></i> Full Calibration</button>
+                <button class="btn btn-primary" data-bind="click: refreshHealthScore" style="margin-left: 10px;"><i class="fa fa-refresh"></i> Refresh</button>
                 <button class="btn btn-warning" data-bind="click: openCleanNozzleWizard" style="margin-left: 10px;"><i class="fa fa-tint"></i> Clean Nozzle</button>
                 <button class="btn btn-info" data-bind="click: openZOffsetWizard" style="margin-left: 10px;"><i class="fa fa-arrows-v"></i> Z-Offset</button>
                 <button class="btn btn-success" data-bind="click: openTrammingWizard" style="margin-left: 10px;"><i class="fa fa-wrench"></i> Tramming</button>
@@ -806,6 +807,67 @@
         <button class="btn btn-info" data-bind="click: trammingStart, visible: trammingStep() === 'adjustments'">Re-measure</button>
         <button class="btn btn-success" data-bind="click: trammingFinalize, visible: trammingStep() === 'adjustments'">Done - Save</button>
         <button class="btn" data-bind="click: trammingClose, visible: trammingStep() === 'done'">Close</button>
+    </div>
+</div>
+
+<!-- Full Calibration Orchestrator Modal (V1.2b.4) -->
+<div id="bcs_fullcal_modal" class="modal hide fade" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false" style="width: 700px; margin-left: -350px;">
+    <div class="modal-header">
+        <h3><i class="fa fa-magic"></i> Full Calibration Orchestrator</h3>
+    </div>
+    <div class="modal-body">
+        <!-- Intro -->
+        <div data-bind="visible: fullCalStep() === 'intro'">
+            <p>Based on your current bed health score (<strong data-bind="text: bedHealthScore"></strong>/100), the system recommends:</p>
+            <div class="alert" data-bind="css: fullCalRecommendationClass">
+                <strong data-bind="text: fullCalRecommendationLabel"></strong>
+            </div>
+            <h4>Calibration plan:</h4>
+            <ol data-bind="foreach: fullCalQueue">
+                <li>
+                    <span data-bind="text: $data.label"></span>
+                    <span class="muted" data-bind="text: ' — ' + $data.description"></span>
+                </li>
+            </ol>
+            <div class="alert alert-info" data-bind="visible: fullCalQueue().length === 0">
+                Bed is in optimal condition. No calibration needed right now.
+            </div>
+            <p class="help-block">You can skip individual steps from within their respective wizards.</p>
+        </div>
+
+        <!-- Running between steps -->
+        <div data-bind="visible: fullCalStep() === 'running'">
+            <h4>Progress:</h4>
+            <div class="progress">
+                <div class="bar" data-bind="style: { width: fullCalProgressPct() + '%' }"></div>
+            </div>
+            <p>Step <strong data-bind="text: fullCalCurrentIndex() + 1"></strong> / <strong data-bind="text: fullCalQueue().length"></strong>
+               — <strong data-bind="text: fullCalCurrentLabel"></strong></p>
+            <ul data-bind="foreach: fullCalQueue">
+                <li>
+                    <span data-bind="visible: $index() < $parent.fullCalCurrentIndex(), text: '✓ ' + $data.label" style="color: #5cb85c;"></span>
+                    <span data-bind="visible: $index() === $parent.fullCalCurrentIndex(), text: '▶ ' + $data.label" style="color: #428bca; font-weight: bold;"></span>
+                    <span data-bind="visible: $index() > $parent.fullCalCurrentIndex(), text: '○ ' + $data.label" style="color: #999;"></span>
+                </li>
+            </ul>
+            <p><i class="fa fa-spinner fa-spin"></i> Wizard active in another window. Complete it (or cancel) to advance.</p>
+        </div>
+
+        <!-- Done -->
+        <div data-bind="visible: fullCalStep() === 'done'">
+            <div class="alert alert-success">
+                <i class="fa fa-check"></i> Full calibration complete!
+            </div>
+            <p>New bed health score: <strong data-bind="text: bedHealthScore"></strong>/100</p>
+            <ul data-bind="foreach: fullCalQueue">
+                <li><span data-bind="text: '✓ ' + $data.label"></span></li>
+            </ul>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn" data-bind="click: fullCalCancel, visible: fullCalStep() !== 'done'">Cancel</button>
+        <button class="btn btn-primary" data-bind="click: fullCalRun, visible: fullCalStep() === 'intro' && fullCalQueue().length > 0">Run Calibration</button>
+        <button class="btn" data-bind="click: fullCalClose, visible: fullCalStep() === 'done' || (fullCalStep() === 'intro' && fullCalQueue().length === 0)">Close</button>
     </div>
 </div>
 

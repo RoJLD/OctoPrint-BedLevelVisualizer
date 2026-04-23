@@ -150,11 +150,27 @@ $(function () {
 			}
 			self.cleanNozzleStep("select_material");
 			$("#bcs_clean_nozzle_modal").modal("hide");
+			// V1.2b.4: advance orchestrator if running (skip = advance)
+			if (self.fullCalStep() === "running") {
+				var queue = self.fullCalQueue();
+				var idx = self.fullCalCurrentIndex();
+				if (idx < queue.length && queue[idx].id === "clean_nozzle") {
+					self._fullCalAdvance();
+				}
+			}
 		};
 
 		self.cleanNozzleClose = function() {
 			self.cleanNozzleStep("select_material");
 			$("#bcs_clean_nozzle_modal").modal("hide");
+			// V1.2b.4: advance orchestrator if running
+			if (self.fullCalStep() === "running") {
+				var queue = self.fullCalQueue();
+				var idx = self.fullCalCurrentIndex();
+				if (idx < queue.length && queue[idx].id === "clean_nozzle") {
+					self._fullCalAdvance();
+				}
+			}
 		};
 
 		// === ZOffset paper test wizard (V1.2b.2) ===
@@ -250,11 +266,27 @@ $(function () {
 			OctoPrint.control.sendGcode(["G1 Z10 F600"]);
 			self.zOffsetStep("intro");
 			$("#bcs_zoffset_modal").modal("hide");
+			// V1.2b.4: advance orchestrator if running
+			if (self.fullCalStep() === "running") {
+				var queue = self.fullCalQueue();
+				var idx = self.fullCalCurrentIndex();
+				if (idx < queue.length && queue[idx].id === "zoffset") {
+					self._fullCalAdvance();
+				}
+			}
 		};
 
 		self.zOffsetClose = function() {
 			self.zOffsetStep("intro");
 			$("#bcs_zoffset_modal").modal("hide");
+			// V1.2b.4: advance orchestrator if running
+			if (self.fullCalStep() === "running") {
+				var queue = self.fullCalQueue();
+				var idx = self.fullCalCurrentIndex();
+				if (idx < queue.length && queue[idx].id === "zoffset") {
+					self._fullCalAdvance();
+				}
+			}
 		};
 
 		// === Tramming wizard (V1.2b.3) ===
@@ -359,12 +391,199 @@ $(function () {
 			self.trammingStep("intro");
 			self.trammingIteration(0);
 			$("#bcs_tramming_modal").modal("hide");
+			// V1.2b.4: advance orchestrator if running
+			if (self.fullCalStep() === "running") {
+				var queue = self.fullCalQueue();
+				var idx = self.fullCalCurrentIndex();
+				if (idx < queue.length && queue[idx].id === "tramming") {
+					self._fullCalAdvance();
+				}
+			}
 		};
 
 		self.trammingClose = function() {
 			self.trammingStep("intro");
 			self.trammingIteration(0);
 			$("#bcs_tramming_modal").modal("hide");
+			// V1.2b.4: advance orchestrator if running
+			if (self.fullCalStep() === "running") {
+				var queue = self.fullCalQueue();
+				var idx = self.fullCalCurrentIndex();
+				if (idx < queue.length && queue[idx].id === "tramming") {
+					self._fullCalAdvance();
+				}
+			}
+		};
+
+		// === Full Calibration orchestrator (V1.2b.4) ===
+		// State: intro | running | done
+		self.fullCalStep = ko.observable("intro");
+		self.fullCalQueue = ko.observableArray([]);
+		self.fullCalCurrentIndex = ko.observable(0);
+
+		// Step definitions
+		self._fullCalSteps = {
+			"clean_nozzle": {
+				id: "clean_nozzle",
+				label: "Clean Nozzle",
+				description: "Heat + clean nozzle physically (manual)",
+				opener: function() { self.openCleanNozzleWizard(); },
+				completer: "_fullCalCompleteCleanNozzle"
+			},
+			"tramming": {
+				id: "tramming",
+				label: "Tramming",
+				description: "Bed leveling via mesh + screw adjustment",
+				opener: function() { self.openTrammingWizard(); },
+				completer: "_fullCalCompleteTramming"
+			},
+			"zoffset": {
+				id: "zoffset",
+				label: "Z-Offset",
+				description: "Paper test + EEPROM save",
+				opener: function() { self.openZOffsetWizard(); },
+				completer: "_fullCalCompleteZOffset"
+			},
+			"mesh": {
+				id: "mesh",
+				label: "Mesh Capture",
+				description: "Final G29 mesh probe before printing",
+				opener: function() { self._fullCalRunMeshCapture(); },
+				completer: "_fullCalCompleteMesh"
+			}
+		};
+
+		self.fullCalCurrentLabel = ko.pureComputed(function() {
+			var queue = self.fullCalQueue();
+			var idx = self.fullCalCurrentIndex();
+			if (idx < 0 || idx >= queue.length) return "--";
+			return queue[idx].label;
+		});
+
+		self.fullCalProgressPct = ko.pureComputed(function() {
+			var queue = self.fullCalQueue();
+			if (queue.length === 0) return 0;
+			return Math.round((self.fullCalCurrentIndex() / queue.length) * 100);
+		});
+
+		self.fullCalRecommendationLabel = ko.observable("");
+		self.fullCalRecommendationClass = ko.observable("alert-info");
+
+		self._buildQueueFromAction = function(action) {
+			var queue = [];
+			var label = "";
+			var cls = "alert-info";
+			if (action === "full_calibration") {
+				queue = ["clean_nozzle", "tramming", "clean_nozzle", "zoffset", "mesh"];
+				label = "Full Calibration — bed is critical (score < 50)";
+				cls = "alert-error";
+			} else if (action === "zoffset_and_mesh") {
+				queue = ["clean_nozzle", "zoffset", "mesh"];
+				label = "Z-Offset + Mesh — bed needs attention (50-69)";
+				cls = "alert-warning";
+			} else if (action === "mesh_only") {
+				queue = ["mesh"];
+				label = "Mesh capture only — bed is OK (70-89)";
+				cls = "alert-info";
+			} else {
+				queue = [];
+				label = "Bed is optimal (90+) — no action needed";
+				cls = "alert-success";
+			}
+			return { queue: queue.map(function(id) { return self._fullCalSteps[id]; }), label: label, cls: cls };
+		};
+
+		self.openFullCalibrationWizard = function() {
+			self.fullCalStep("intro");
+			self.fullCalCurrentIndex(0);
+			// Refresh score first to ensure accurate recommendation
+			OctoPrint.simpleApiCommand("bedcalibrationsuite", "getHealthScore").done(function(data) {
+				self._applyHealthState(data);
+				var score = self.bedHealthScore();
+				var action;
+				if (score >= 90) action = "none";
+				else if (score >= 70) action = "mesh_only";
+				else if (score >= 50) action = "zoffset_and_mesh";
+				else action = "full_calibration";
+				var built = self._buildQueueFromAction(action);
+				self.fullCalQueue(built.queue);
+				self.fullCalRecommendationLabel(built.label);
+				self.fullCalRecommendationClass(built.cls);
+				$("#bcs_fullcal_modal").modal("show");
+			}).fail(function() {
+				new PNotify({title: "Full Calibration", text: "Failed to fetch health score", type: "error"});
+			});
+		};
+
+		self.fullCalRun = function() {
+			if (self.fullCalQueue().length === 0) {
+				self.fullCalStep("done");
+				return;
+			}
+			self.fullCalStep("running");
+			self.fullCalCurrentIndex(0);
+			self._fullCalLaunchCurrent();
+		};
+
+		self._fullCalLaunchCurrent = function() {
+			var idx = self.fullCalCurrentIndex();
+			var queue = self.fullCalQueue();
+			if (idx >= queue.length) {
+				// All done
+				$("#bcs_fullcal_modal").modal("show");
+				self.fullCalStep("done");
+				self.refreshHealthScore();
+				return;
+			}
+			var step = queue[idx];
+			// Hide orchestrator modal so the sub-wizard is visible
+			$("#bcs_fullcal_modal").modal("hide");
+			// Small delay then open the sub-wizard
+			setTimeout(function() {
+				step.opener();
+			}, 300);
+		};
+
+		self._fullCalAdvance = function() {
+			if (self.fullCalStep() !== "running") return;
+			self.fullCalCurrentIndex(self.fullCalCurrentIndex() + 1);
+			// Re-show orchestrator briefly between steps
+			setTimeout(function() {
+				$("#bcs_fullcal_modal").modal("show");
+				setTimeout(function() {
+					self._fullCalLaunchCurrent();
+				}, 800); // 800ms pause to show progress
+			}, 300);
+		};
+
+		self._fullCalRunMeshCapture = function() {
+			// For "mesh" step we don't have a wizard — directly trigger via API
+			// and immediately advance (the mesh result will arrive async via plugin_message)
+			OctoPrint.simpleApiCommand("bedcalibrationsuite", "startTramming").done(function() {
+				new PNotify({
+					title: "Mesh Capture",
+					text: "Final mesh probe started. The orchestrator will advance once it completes.",
+					type: "info"
+				});
+			});
+			// Advance optimistically — the mesh will populate via async event
+			setTimeout(function() {
+				self._fullCalAdvance();
+			}, 1000);
+		};
+
+		self.fullCalCancel = function() {
+			self.fullCalStep("intro");
+			self.fullCalCurrentIndex(0);
+			self.fullCalQueue([]);
+			$("#bcs_fullcal_modal").modal("hide");
+		};
+
+		self.fullCalClose = function() {
+			self.fullCalStep("intro");
+			self.fullCalCurrentIndex(0);
+			self.fullCalQueue([]);
+			$("#bcs_fullcal_modal").modal("hide");
 		};
 
 		self._scoreLabelClass = function(score) {
