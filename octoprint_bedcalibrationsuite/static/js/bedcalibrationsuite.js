@@ -257,6 +257,116 @@ $(function () {
 			$("#bcs_zoffset_modal").modal("hide");
 		};
 
+		// === Tramming wizard (V1.2b.3) ===
+		// State machine: intro | capturing | adjustments | saving | done
+		self.trammingStep = ko.observable("intro");
+		self.trammingIteration = ko.observable(0);
+		self.trammingVariance = ko.observable("--");
+		self.trammingAdjustmentRows = ko.observableArray([]);
+		self.trammingThreshold = ko.observable(0.12); // Will read from settings later
+		self.trammingLastMesh = null;
+
+		self.trammingWithinThreshold = ko.pureComputed(function() {
+			var v = parseFloat(self.trammingVariance());
+			if (isNaN(v)) return false;
+			return v < self.trammingThreshold();
+		});
+
+		self.openTrammingWizard = function() {
+			self.trammingStep("intro");
+			self.trammingIteration(0);
+			self.trammingVariance("--");
+			self.trammingAdjustmentRows([]);
+			self.trammingLastMesh = null;
+			// Try to read threshold from plugin settings if available
+			try {
+				var threshold = self.settings && self.settings.settings && self.settings.settings.plugins && self.settings.settings.plugins.bedcalibrationsuite
+					? self.settings.settings.plugins.bedcalibrationsuite.tramming_threshold_mm()
+					: 0.12;
+				self.trammingThreshold(parseFloat(threshold) || 0.12);
+			} catch (e) {
+				self.trammingThreshold(0.12);
+			}
+			$("#bcs_tramming_modal").modal("show");
+		};
+
+		self.trammingStart = function() {
+			self.trammingStep("capturing");
+			self.trammingIteration(self.trammingIteration() + 1);
+			OctoPrint.simpleApiCommand("bedcalibrationsuite", "startTramming")
+				.fail(function() {
+					new PNotify({title: "Tramming", text: "Mesh capture failed to start", type: "error"});
+					self.trammingStep("intro");
+				});
+			// The mesh result will arrive via onDataUpdaterPluginMessage -> _onTrammingMeshReceived
+		};
+
+		self._onTrammingMeshReceived = function(mesh) {
+			// Called from onDataUpdaterPluginMessage when a mesh arrives AND wizard is capturing
+			if (self.trammingStep() !== "capturing") return;
+			if (!mesh || mesh.length === 0) return;
+
+			self.trammingLastMesh = mesh;
+
+			OctoPrint.simpleApiCommand("bedcalibrationsuite", "computeTrammingAdjustments", {
+				mesh: mesh,
+				reference: "center"
+			}).done(function(data) {
+				if (data.status !== "ok") {
+					new PNotify({title: "Tramming", text: "Adjustment computation failed", type: "error"});
+					self.trammingStep("intro");
+					return;
+				}
+				self.trammingVariance(data.variance_mm.toFixed(4));
+				var rows = [];
+				var corners = ["FL", "FR", "BL", "BR"];
+				corners.forEach(function(name) {
+					var adj = data.adjustments[name];
+					if (adj) {
+						rows.push({
+							name: name,
+							offset_mm: adj.offset_mm.toFixed(4),
+							turns: adj.turns.toFixed(2),
+							direction: adj.direction,
+							instruction: adj.instruction
+						});
+					}
+				});
+				self.trammingAdjustmentRows(rows);
+				self.trammingStep("adjustments");
+			}).fail(function() {
+				new PNotify({title: "Tramming", text: "Adjustment API failed", type: "error"});
+				self.trammingStep("intro");
+			});
+		};
+
+		self.trammingFinalize = function() {
+			self.trammingStep("saving");
+			var variance = parseFloat(self.trammingVariance());
+			OctoPrint.simpleApiCommand("bedcalibrationsuite", "trammingComplete", {
+				mesh_variance: variance,
+				iterations: self.trammingIteration()
+			}).done(function() {
+				self.trammingStep("done");
+				self.refreshHealthScore();
+			}).fail(function() {
+				new PNotify({title: "Tramming", text: "Save failed", type: "error"});
+				self.trammingStep("adjustments");
+			});
+		};
+
+		self.trammingCancel = function() {
+			self.trammingStep("intro");
+			self.trammingIteration(0);
+			$("#bcs_tramming_modal").modal("hide");
+		};
+
+		self.trammingClose = function() {
+			self.trammingStep("intro");
+			self.trammingIteration(0);
+			$("#bcs_tramming_modal").modal("hide");
+		};
+
 		self._scoreLabelClass = function(score) {
 			if (score >= 90) return "label label-success";
 			if (score >= 70) return "label label-info";
@@ -441,7 +551,7 @@ $(function () {
 		};
 
 		self.onDataUpdaterPluginMessage = function (plugin, mesh_data) {
-			if (plugin !== "bedlevelvisualizer") {
+			if (plugin !== "bedcalibrationsuite" && plugin !== "bedlevelvisualizer") {
 				return;
 			}
 
@@ -519,6 +629,10 @@ $(function () {
 					if (mesh_data.bed_temp !== undefined && mesh_data.bed_temp !== null) {
 						self.current_bed_temp(mesh_data.bed_temp);
 					}
+				}
+				// V1.2b.3: If tramming wizard is active, forward the mesh
+				if (mesh_data.mesh && self._onTrammingMeshReceived) {
+					self._onTrammingMeshReceived(mesh_data.mesh);
 				}
 				return;
 			}

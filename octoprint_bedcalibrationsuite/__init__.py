@@ -196,6 +196,8 @@ try:
                 getHealthScore=[],
                 startFullCalibration=[],
                 startTramming=[],
+                computeTrammingAdjustments=["mesh", "reference"],
+                trammingComplete=["mesh_variance", "iterations"],
                 startZOffset=[],
                 startMeshOnly=[],
                 cleanNozzle=["material"],
@@ -248,6 +250,43 @@ try:
                 gcodes = self._zoffset.probe_baseline_gcode()
                 self._printer.commands(gcodes)
                 return flask.jsonify({"status": "probing_baseline"})
+            if command == "startTramming":
+                # Trigger mesh capture via the custom atcommand that's wired to enable_mesh_collection
+                # Sequence: heat bed (optional, user decides), home, mesh probe
+                # We just send the mesh capture command; the user has already heated bed via Full Cal or manually
+                configured_cmd = (self._settings.get(["command"]) or "").strip()
+                if configured_cmd:
+                    gcodes = configured_cmd.split("\n")
+                else:
+                    # Fallback default Marlin sequence
+                    gcodes = ["G28", "@BEDLEVELVISUALIZER", "G29"]
+                self._printer.commands(gcodes)
+                return flask.jsonify({"status": "mesh_capturing"})
+            if command == "computeTrammingAdjustments":
+                try:
+                    mesh = data.get("mesh")
+                    reference = data.get("reference", "center")
+                    if not mesh or not isinstance(mesh, list):
+                        return flask.jsonify({"status": "error", "message": "invalid mesh"}), 400
+                    adjustments = self._tramming.compute_screw_adjustments(mesh, reference=reference)
+                    variance = self._tramming.mesh_variance(mesh)
+                    return flask.jsonify({
+                        "status": "ok",
+                        "adjustments": adjustments,
+                        "variance_mm": round(variance, 4),
+                    })
+                except Exception as e:
+                    return flask.jsonify({"status": "error", "message": str(e)}), 500
+            if command == "trammingComplete":
+                try:
+                    variance = float(data.get("mesh_variance", 0))
+                    iterations = int(data.get("iterations", 1))
+                except (TypeError, ValueError):
+                    return flask.jsonify({"status": "error", "message": "invalid params"}), 400
+                if self._health:
+                    self._health.update_tramming(mesh_variance=variance, iterations=iterations)
+                    self._health.save()
+                return flask.jsonify({"status": "saved", "variance_mm": variance, "iterations": iterations})
             return flask.jsonify({"status": "ok"})
 
         def on_event(self, event, payload):
