@@ -100,6 +100,63 @@ $(function () {
 		self.lastMeshVariance = ko.observable("--");
 		self.recommendedAction = ko.observable("--");
 
+		// === CleanNozzle wizard (V1.2b.1) ===
+		self.cleanNozzleMaterials = ko.observableArray(["PLA", "PLA+", "PETG", "ABS", "TPU", "Nylon"]);
+		self.cleanNozzleMaterial = ko.observable("PLA");
+		self.cleanNozzleStep = ko.observable("select_material"); // select_material | heating | confirm | done
+
+		self._materialCleanTemps = {
+			"PLA": 200, "PLA+": 210, "PETG": 235, "ABS": 245, "TPU": 220, "Nylon": 250
+		};
+		self.cleanNozzleTargetTemp = ko.pureComputed(function() {
+			return self._materialCleanTemps[self.cleanNozzleMaterial()] || 200;
+		});
+
+		self.openCleanNozzleWizard = function() {
+			self.cleanNozzleStep("select_material");
+			$("#bcs_clean_nozzle_modal").modal("show");
+		};
+
+		self.cleanNozzleStart = function() {
+			var material = self.cleanNozzleMaterial();
+			OctoPrint.simpleApiCommand("bedcalibrationsuite", "cleanNozzle", { material: material })
+				.done(function(data) {
+					console.log("Clean nozzle started:", data);
+					self.cleanNozzleStep("heating");
+				})
+				.fail(function(xhr) {
+					new PNotify({
+						title: "Clean Nozzle Failed",
+						text: "API command failed. Check OctoPrint logs.",
+						type: "error"
+					});
+				});
+		};
+
+		self.cleanNozzleProceed = function() {
+			self.cleanNozzleStep("confirm");
+		};
+
+		self.cleanNozzleDone = function() {
+			self.cleanNozzleStep("done");
+			// Cool down the nozzle
+			OctoPrint.control.sendGcode(["M104 S0"]);
+		};
+
+		self.cleanNozzleCancel = function() {
+			// If heating was initiated, cool down
+			if (self.cleanNozzleStep() === "heating" || self.cleanNozzleStep() === "confirm") {
+				OctoPrint.control.sendGcode(["M104 S0"]);
+			}
+			self.cleanNozzleStep("select_material");
+			$("#bcs_clean_nozzle_modal").modal("hide");
+		};
+
+		self.cleanNozzleClose = function() {
+			self.cleanNozzleStep("select_material");
+			$("#bcs_clean_nozzle_modal").modal("hide");
+		};
+
 		self._scoreLabelClass = function(score) {
 			if (score >= 90) return "label label-success";
 			if (score >= 70) return "label label-info";
