@@ -87,6 +87,123 @@ $(function () {
 		self.mesh_diff_index_a = ko.observable("0");
 		self.mesh_diff_index_b = ko.observable("1");
 
+		// === BedHealth observables (V1.2a) ===
+		self.bedHealthScore = ko.observable(0);
+		self.trammingScore = ko.observable(0);
+		self.zoffsetScore = ko.observable(0);
+		self.meshScore = ko.observable(0);
+		self.lastTrammingDate = ko.observable("Never");
+		self.lastTrammingVariance = ko.observable("--");
+		self.lastZoffsetDate = ko.observable("Never");
+		self.lastZoffsetValue = ko.observable("--");
+		self.lastMeshDate = ko.observable("Never");
+		self.lastMeshVariance = ko.observable("--");
+		self.recommendedAction = ko.observable("--");
+
+		self._scoreLabelClass = function(score) {
+			if (score >= 90) return "label label-success";
+			if (score >= 70) return "label label-info";
+			if (score >= 50) return "label label-warning";
+			return "label label-important";
+		};
+
+		self.trammingLabelClass = ko.pureComputed(function() {
+			return self._scoreLabelClass(self.trammingScore());
+		});
+		self.zoffsetLabelClass = ko.pureComputed(function() {
+			return self._scoreLabelClass(self.zoffsetScore());
+		});
+		self.meshLabelClass = ko.pureComputed(function() {
+			return self._scoreLabelClass(self.meshScore());
+		});
+
+		self._formatDate = function(isoString) {
+			if (!isoString) return "Never";
+			try {
+				var d = new Date(isoString);
+				return d.toLocaleDateString() + " " + d.toLocaleTimeString();
+			} catch (e) {
+				return isoString;
+			}
+		};
+
+		self._renderHealthGauge = function(score) {
+			if (typeof Plotly === "undefined") return;
+			var gaugeDiv = document.getElementById("bedhealth_gauge");
+			if (!gaugeDiv) return;
+
+			var color = score >= 90 ? "#5cb85c"
+					  : score >= 70 ? "#5bc0de"
+					  : score >= 50 ? "#f0ad4e"
+					  : "#d9534f";
+
+			var data = [{
+				type: "indicator",
+				mode: "gauge+number",
+				value: score,
+				gauge: {
+					axis: { range: [0, 100], tickwidth: 1 },
+					bar: { color: color },
+					steps: [
+						{ range: [0, 50], color: "#fce4e4" },
+						{ range: [50, 70], color: "#fcf2d4" },
+						{ range: [70, 90], color: "#d9edf7" },
+						{ range: [90, 100], color: "#dff0d8" }
+					],
+					threshold: {
+						line: { color: "black", width: 3 },
+						thickness: 0.75,
+						value: score
+					}
+				}
+			}];
+			var layout = { width: 250, height: 200, margin: { t: 0, b: 0, l: 0, r: 0 } };
+			Plotly.newPlot(gaugeDiv, data, layout, { displayModeBar: false });
+		};
+
+		self._applyHealthState = function(state) {
+			if (!state) return;
+			self.bedHealthScore(state.bed_health_score || 0);
+			var breakdown = state.score_breakdown || {};
+			self.trammingScore(breakdown.tramming || 0);
+			self.zoffsetScore(breakdown.zoffset || 0);
+			self.meshScore(breakdown.mesh || 0);
+
+			var calState = state.calibration_state || {};
+			var lt = calState.last_tramming;
+			if (lt) {
+				self.lastTrammingDate(self._formatDate(lt.date));
+				self.lastTrammingVariance((lt.mesh_variance_mm || 0).toFixed(3));
+			}
+			var lz = calState.last_zoffset;
+			if (lz) {
+				self.lastZoffsetDate(self._formatDate(lz.date));
+				self.lastZoffsetValue((lz.value_mm || 0).toFixed(3));
+			}
+			var meshHistory = state.mesh_history || [];
+			if (meshHistory.length > 0) {
+				var latest = meshHistory[0];
+				self.lastMeshDate(self._formatDate(latest.date));
+				self.lastMeshVariance((latest.variance_mm || 0).toFixed(3));
+			}
+
+			var score = self.bedHealthScore();
+			if (score >= 90) self.recommendedAction("None - optimal");
+			else if (score >= 70) self.recommendedAction("Mesh only");
+			else if (score >= 50) self.recommendedAction("Z-Offset + Mesh");
+			else self.recommendedAction("Full Calibration");
+
+			self._renderHealthGauge(score);
+		};
+
+		self.refreshHealthScore = function() {
+			OctoPrint.simpleApiCommand("bedcalibrationsuite", "getHealthScore").done(function(data) {
+				self._applyHealthState(data);
+			}).fail(function() {
+				console.warn("BedCalibrationSuite: getHealthScore failed");
+			});
+		};
+
 		self.get_cell_text = function(item) {
 			return (!item.$parentContext.$parent.len?Math.abs(parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])):parseFloat(item.$parentContext.$parent.mesh[item.$root.descending_y()?item.$root.mesh_data_y().length-1-item.$parentContext.$index():item.$parentContext.$index()][item.$root.descending_x()?item.$root.mesh_data_x().length-1-item.$index():item.$index()])).toFixed(item.$parentContext.$parent.len);
 		};
@@ -126,6 +243,7 @@ $(function () {
 					self.settings_active(false);
 				}
 			});
+			self.refreshHealthScore();
 		};
 
 		self.onSettingsBeforeSave = function() {
