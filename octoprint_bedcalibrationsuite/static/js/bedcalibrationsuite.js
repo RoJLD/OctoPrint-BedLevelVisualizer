@@ -613,38 +613,59 @@ $(function () {
 			}
 		};
 
-		self._renderHealthGauge = function(score) {
+		self._renderHealthGauge = function(score, hasData) {
 			if (typeof Plotly === "undefined") return;
 			var gaugeDiv = document.getElementById("bedhealth_gauge");
 			if (!gaugeDiv) return;
 
-			var color = score >= 90 ? "#5cb85c"
+			var color = !hasData ? "#888"
+					  : score >= 90 ? "#5cb85c"
 					  : score >= 70 ? "#5bc0de"
 					  : score >= 50 ? "#f0ad4e"
 					  : "#d9534f";
+
+			// Theme-aware: detect dark/light by checking body bg
+			var isDark = false;
+			try {
+				var bg = window.getComputedStyle(document.body).backgroundColor;
+				var rgb = bg.match(/\d+/g);
+				if (rgb && rgb.length >= 3) {
+					var luma = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+					isDark = luma < 128;
+				}
+			} catch (e) {}
+
+			var fontColor = isDark ? "#eee" : "#333";
+			var stepColors = isDark
+				? ["rgba(217,83,79,0.20)", "rgba(240,173,78,0.20)", "rgba(91,192,222,0.20)", "rgba(92,184,92,0.20)"]
+				: ["#fce4e4", "#fcf2d4", "#d9edf7", "#dff0d8"];
 
 			var data = [{
 				type: "indicator",
 				mode: "gauge+number",
 				value: score,
+				number: { font: { color: fontColor, size: 30 } },
 				gauge: {
-					axis: { range: [0, 100], tickwidth: 1 },
-					bar: { color: color },
+					axis: { range: [0, 100], tickwidth: 1, tickcolor: fontColor, tickfont: { color: fontColor, size: 9 } },
+					bar: { color: color, thickness: 0.65 },
+					bgcolor: "transparent",
+					borderwidth: 0,
 					steps: [
-						{ range: [0, 50], color: "#fce4e4" },
-						{ range: [50, 70], color: "#fcf2d4" },
-						{ range: [70, 90], color: "#d9edf7" },
-						{ range: [90, 100], color: "#dff0d8" }
-					],
-					threshold: {
-						line: { color: "black", width: 3 },
-						thickness: 0.75,
-						value: score
-					}
+						{ range: [0, 50], color: stepColors[0] },
+						{ range: [50, 70], color: stepColors[1] },
+						{ range: [70, 90], color: stepColors[2] },
+						{ range: [90, 100], color: stepColors[3] }
+					]
 				}
 			}];
-			var layout = { width: 250, height: 200, margin: { t: 0, b: 0, l: 0, r: 0 } };
-			Plotly.newPlot(gaugeDiv, data, layout, { displayModeBar: false });
+			var layout = {
+				height: 130,
+				margin: { t: 10, b: 0, l: 20, r: 20 },
+				paper_bgcolor: "rgba(0,0,0,0)",
+				plot_bgcolor: "rgba(0,0,0,0)",
+				font: { color: fontColor }
+			};
+			Plotly.newPlot(gaugeDiv, data, layout, { displayModeBar: false, responsive: true });
 		};
 
 		self._applyHealthState = function(state) {
@@ -674,12 +695,14 @@ $(function () {
 			}
 
 			var score = self.bedHealthScore();
-			if (score >= 90) self.recommendedAction("None - optimal");
+			var hasAnyData = !!(calState.last_tramming || calState.last_zoffset || meshHistory.length > 0);
+			if (!hasAnyData) self.recommendedAction("No data yet — start with Full Calibration");
+			else if (score >= 90) self.recommendedAction("None — optimal");
 			else if (score >= 70) self.recommendedAction("Mesh only");
 			else if (score >= 50) self.recommendedAction("Z-Offset + Mesh");
 			else self.recommendedAction("Full Calibration");
 
-			self._renderHealthGauge(score);
+			self._renderHealthGauge(score, hasAnyData);
 		};
 
 		self.refreshHealthScore = function() {
